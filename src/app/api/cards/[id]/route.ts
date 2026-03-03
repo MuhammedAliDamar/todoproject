@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonResponse, errorResponse, verifyCardAccess } from "@/lib/utils";
+import { notifyCardMoved, notifyCardDeleted, notifyDueDateSet } from "@/lib/slack";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -65,8 +66,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       },
     });
 
-    // Log activity for moves
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+
+    // Log activity + Slack for moves
     if (data.listId !== undefined) {
+      const oldList = await prisma.list.findUnique({ where: { id: data.listId }, select: { title: true } });
       await prisma.activity.create({
         data: {
           action: `"${card.title}" kartını taşıdı`,
@@ -74,6 +78,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
           userId,
         },
       });
+      if (user && oldList) {
+        notifyCardMoved(user.name, card.title, "önceki liste", oldList.title);
+      }
+    }
+
+    // Slack for due date
+    if (data.dueDate && user) {
+      notifyDueDateSet(user.name, card.title, new Date(data.dueDate).toLocaleDateString("tr-TR"));
     }
 
     return jsonResponse(card);
@@ -90,7 +102,19 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const hasAccess = await verifyCardAccess(id, userId);
     if (!hasAccess) return errorResponse("Kart bulunamadı veya yetkiniz yok", 403);
 
+    // Slack bildirimi için kart bilgisini sil öncesi al
+    const cardInfo = await prisma.card.findUnique({
+      where: { id },
+      select: { title: true, list: { select: { board: { select: { title: true } } } } },
+    });
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+
     await prisma.card.delete({ where: { id } });
+
+    if (cardInfo && user) {
+      notifyCardDeleted(user.name, cardInfo.title, cardInfo.list.board.title);
+    }
+
     return jsonResponse({ message: "Kart silindi" });
   } catch {
     return errorResponse("Sunucu hatası", 500);

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonResponse, errorResponse, verifyCardAccess } from "@/lib/utils";
+import { notifyCommentAdded } from "@/lib/slack";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -44,6 +45,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         user: { select: { id: true, name: true, avatar: true } },
       },
     });
+
+    // Slack bildirimi
+    const card = await prisma.card.findUnique({
+      where: { id: cardId },
+      select: { title: true, list: { select: { board: { select: { title: true } } } } },
+    });
+    if (card) {
+      notifyCommentAdded(comment.user.name, content.trim(), card.title, card.list.board.title);
+    }
 
     return jsonResponse(comment, 201);
   } catch {

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonResponse, errorResponse } from "@/lib/utils";
+import { notifyCardCreated } from "@/lib/slack";
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,6 +40,16 @@ export async function POST(req: NextRequest) {
         userId,
       },
     });
+
+    // Slack bildirimi
+    const list = await prisma.list.findUnique({
+      where: { id: listId },
+      include: { board: { select: { title: true } } },
+    });
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+    if (list && user) {
+      notifyCardCreated(user.name, card.title, list.title, list.board.title);
+    }
 
     return jsonResponse(card, 201);
   } catch {

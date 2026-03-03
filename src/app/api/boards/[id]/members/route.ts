@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonResponse, errorResponse } from "@/lib/utils";
+import { notifyMemberAdded } from "@/lib/slack";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -44,6 +45,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         boardId,
       },
     });
+
+    // Slack bildirimi
+    const board = await prisma.board.findUnique({ where: { id: boardId }, select: { title: true } });
+    const addedByUser = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+    if (board && addedByUser) {
+      notifyMemberAdded(addedByUser.name, targetUser.name, board.title, role);
+    }
 
     return jsonResponse(member, 201);
   } catch {
