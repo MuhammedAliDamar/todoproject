@@ -79,13 +79,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         },
       });
       if (user && oldList) {
-        notifyCardMoved(user.name, card.title, "önceki liste", oldList.title);
+        notifyCardMoved(id, user.name, card.title, "önceki liste", oldList.title);
       }
     }
 
     // Slack for due date
     if (data.dueDate && user) {
-      notifyDueDateSet(user.name, card.title, new Date(data.dueDate).toLocaleDateString("tr-TR"));
+      notifyDueDateSet(id, user.name, card.title, new Date(data.dueDate).toLocaleDateString("tr-TR"));
     }
 
     return jsonResponse(card);
@@ -105,14 +105,14 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     // Slack bildirimi için kart bilgisini sil öncesi al
     const cardInfo = await prisma.card.findUnique({
       where: { id },
-      select: { title: true, list: { select: { board: { select: { title: true } } } } },
+      select: { title: true, list: { select: { board: { select: { id: true, title: true } } } } },
     });
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
 
     await prisma.card.delete({ where: { id } });
 
     if (cardInfo && user) {
-      notifyCardDeleted(user.name, cardInfo.title, cardInfo.list.board.title);
+      notifyCardDeleted(cardInfo.list.board.id, user.name, cardInfo.title, cardInfo.list.board.title);
     }
 
     return jsonResponse({ message: "Kart silindi" });

@@ -28,16 +28,20 @@ model User {
 }
 
 model Board {
-  id          String        @id @default(cuid())
-  title       String
-  background  String        @default("#0079bf")
-  userId      String
-  createdAt   DateTime      @default(now())
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  members     BoardMember[]
-  lists       List[]
-  labels      Label[]
-  notifications Notification[]
+  id              String        @id @default(cuid())
+  title           String
+  background      String        @default("#0079bf")
+  slackToken      String?
+  slackChannelId  String?
+  slackChannelName String?
+  slackTeamName   String?
+  userId          String
+  createdAt       DateTime      @default(now())
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  members         BoardMember[]
+  lists           List[]
+  labels          Label[]
+  notifications   Notification[]
 }
 
 model BoardMember {

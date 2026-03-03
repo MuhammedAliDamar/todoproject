@@ -52,7 +52,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       select: { title: true, list: { select: { board: { select: { title: true } } } } },
     });
     if (card) {
-      notifyCommentAdded(comment.user.name, content.trim(), card.title, card.list.board.title);
+      notifyCommentAdded(cardId, comment.user.name, content.trim(), card.title, card.list.board.title);
     }
 
     return jsonResponse(comment, 201);

@@ -17,6 +17,7 @@ import List from "./List";
 import AddList from "./AddList";
 import CardDetail from "./CardDetail";
 import MemberList from "./MemberList";
+import SlackSettings from "./SlackSettings";
 import SearchBar from "@/components/shared/SearchBar";
 import Button from "@/components/ui/Button";
 
@@ -45,6 +46,10 @@ interface BoardData {
   title: string;
   background: string;
   userId: string;
+  slackToken: string | null;
+  slackChannelId: string | null;
+  slackChannelName: string | null;
+  slackTeamName: string | null;
   labels: { id: string; name: string; color: string }[];
   members: { id: string; role: string; user: { id: string; name: string; email: string; avatar?: string | null } }[];
   lists: ListData[];
@@ -60,6 +65,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
   const [activeCard, setActiveCard] = useState<CardData | null>(null);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [showMembers, setShowMembers] = useState(false);
+  const [showSlack, setShowSlack] = useState(false);
   const [search, setSearch] = useState("");
   const [filterLabel, setFilterLabel] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
@@ -264,6 +270,15 @@ export default function BoardView({ boardId }: BoardViewProps) {
             ))}
           </select>
 
+          <Button size="sm" variant="secondary" onClick={() => setShowSlack(true)}>
+            {board.slackChannelId ? (
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 bg-green-400 rounded-full" />
+                Slack
+              </span>
+            ) : "Slack"}
+          </Button>
+
           <Button size="sm" variant="secondary" onClick={() => setShowMembers(true)}>
             Üyeler ({board.members.length})
           </Button>
@@ -310,6 +325,19 @@ export default function BoardView({ boardId }: BoardViewProps) {
           cardId={selectedCardId}
           boardLabels={board.labels}
           onClose={() => setSelectedCardId(null)}
+          onUpdate={fetchBoard}
+        />
+      )}
+
+      {/* Slack Settings Modal */}
+      {showSlack && (
+        <SlackSettings
+          boardId={board.id}
+          slackConnected={!!board.slackToken}
+          slackChannelId={board.slackChannelId}
+          slackChannelName={board.slackChannelName}
+          slackTeamName={board.slackTeamName}
+          onClose={() => setShowSlack(false)}
           onUpdate={fetchBoard}
         />
       )}

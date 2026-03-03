@@ -39,7 +39,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return errorResponse("Board bulunamadı", 404);
     }
 
-    return jsonResponse(board);
+    // slackToken'ı client'a göndermiyoruz, sadece bağlı olup olmadığını
+    return jsonResponse({
+      ...board,
+      slackToken: board.slackToken ? "connected" : null,
+    });
   } catch {
     return errorResponse("Sunucu hatası", 500);
   }
@@ -70,6 +74,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       data: {
         ...(data.title && { title: data.title.trim() }),
         ...(data.background && { background: data.background }),
+        ...(data.slackChannelId !== undefined && { slackChannelId: data.slackChannelId }),
+        ...(data.slackChannelName !== undefined && { slackChannelName: data.slackChannelName }),
       },
     });
 

@@ -44,11 +44,11 @@ export async function POST(req: NextRequest) {
     // Slack bildirimi
     const list = await prisma.list.findUnique({
       where: { id: listId },
-      include: { board: { select: { title: true } } },
+      include: { board: { select: { id: true, title: true } } },
     });
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
     if (list && user) {
-      notifyCardCreated(user.name, card.title, list.title, list.board.title);
+      notifyCardCreated(list.board.id, user.name, card.title, list.title, list.board.title);
     }
 
     return jsonResponse(card, 201);
