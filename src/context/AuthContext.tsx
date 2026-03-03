@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!res.ok) throw new Error(data.error);
 
     setUser(data.user);
-    router.push("/boards");
+    window.location.href = "/boards";
   };
 
   const register = async (name: string, email: string, password: string) => {
@@ -70,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!res.ok) throw new Error(data.error);
 
     setUser(data.user);
-    router.push("/boards");
+    window.location.href = "/boards";
   };
 
   const logout = () => {
