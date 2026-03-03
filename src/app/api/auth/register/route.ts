@@ -31,11 +31,12 @@ export async function POST(req: NextRequest) {
       user: { id: user.id, name: user.name, email: user.email },
     });
 
+    const isHttps = process.env.NEXT_PUBLIC_APP_URL?.startsWith("https");
     response.cookies.set("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: !!isHttps,
       sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60 * 24 * 7,
       path: "/",
     });
 
