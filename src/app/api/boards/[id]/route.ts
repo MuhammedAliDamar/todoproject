@@ -39,10 +39,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return errorResponse("Board bulunamadı", 404);
     }
 
-    // slackToken'ı client'a göndermiyoruz, sadece bağlı olup olmadığını
+    // Slack bilgilerini ayrı çek (include'da gelmediği için)
+    const slackInfo = await prisma.board.findUnique({
+      where: { id },
+      select: { slackToken: true, slackChannelId: true, slackChannelName: true, slackTeamName: true },
+    });
+
     return jsonResponse({
       ...board,
-      slackToken: board.slackToken ? "connected" : null,
+      slackToken: slackInfo?.slackToken ? "connected" : null,
+      slackChannelId: slackInfo?.slackChannelId || null,
+      slackChannelName: slackInfo?.slackChannelName || null,
+      slackTeamName: slackInfo?.slackTeamName || null,
     });
   } catch {
     return errorResponse("Sunucu hatası", 500);
