@@ -15,7 +15,7 @@ interface LabelPickerProps {
 export default function LabelPicker({ boardLabels, activeLabels, onToggle }: LabelPickerProps) {
   return (
     <div className="space-y-1">
-      <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Etiketler</h4>
+      <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Labels</h4>
       {boardLabels.map((label) => {
         const isActive = activeLabels.includes(label.id);
         return (

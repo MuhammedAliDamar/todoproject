@@ -20,7 +20,7 @@ export default function BoardCard({ id, title, background, listCount }: BoardCar
         style={{ backgroundColor: background }}
       >
         <h3 className="text-white font-bold text-lg truncate group-hover:underline">{title}</h3>
-        <p className="text-white/80 text-sm">{listCount} liste</p>
+        <p className="text-white/80 text-sm">{listCount} {listCount === 1 ? "list" : "lists"}</p>
       </div>
     </Link>
   );

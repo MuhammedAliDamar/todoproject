@@ -61,7 +61,7 @@ export default function Card({ id, title, coverColor, labels, dueDate, _count, o
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              {new Date(dueDate).toLocaleDateString("tr-TR")}
+              {new Date(dueDate).toLocaleDateString("en-US")}
             </span>
           )}
           {_count.checklists > 0 && (

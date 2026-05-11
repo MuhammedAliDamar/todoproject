@@ -8,7 +8,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const userId = req.headers.get("x-user-id")!;
 
     const hasAccess = await verifyListAccess(id, userId);
-    if (!hasAccess) return errorResponse("Liste bulunamadı veya yetkiniz yok", 403);
+    if (!hasAccess) return errorResponse("List not found or you don't have permission", 403);
 
     const data = await req.json();
 
@@ -22,7 +22,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     return jsonResponse(list);
   } catch {
-    return errorResponse("Sunucu hatası", 500);
+    return errorResponse("Server error", 500);
   }
 }
 
@@ -32,11 +32,11 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const userId = req.headers.get("x-user-id")!;
 
     const hasAccess = await verifyListAccess(id, userId);
-    if (!hasAccess) return errorResponse("Liste bulunamadı veya yetkiniz yok", 403);
+    if (!hasAccess) return errorResponse("List not found or you don't have permission", 403);
 
     await prisma.list.delete({ where: { id } });
-    return jsonResponse({ message: "Liste silindi" });
+    return jsonResponse({ message: "List deleted" });
   } catch {
-    return errorResponse("Sunucu hatası", 500);
+    return errorResponse("Server error", 500);
   }
 }

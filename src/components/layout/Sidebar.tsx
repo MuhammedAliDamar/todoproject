@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 const navItems = [
   {
-    label: "Boardlar",
+    label: "Boards",
     href: "/boards",
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

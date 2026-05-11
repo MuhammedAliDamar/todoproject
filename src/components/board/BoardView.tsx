@@ -201,7 +201,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-3.5rem)]">
-        <p className="text-gray-500">Yükleniyor...</p>
+        <p className="text-gray-500">Loading...</p>
       </div>
     );
   }
@@ -209,7 +209,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
   if (!board) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-3.5rem)]">
-        <p className="text-gray-500">Board bulunamadı</p>
+        <p className="text-gray-500">Board not found</p>
       </div>
     );
   }
@@ -253,7 +253,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
 
         <div className="flex items-center gap-2">
           <div className="w-48">
-            <SearchBar value={search} onChange={setSearch} placeholder="Kart ara..." />
+            <SearchBar value={search} onChange={setSearch} placeholder="Search cards..." />
           </div>
 
           {/* Label filter */}
@@ -262,7 +262,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
             onChange={(e) => setFilterLabel(e.target.value || null)}
             className="text-sm bg-white/20 text-white border-none rounded-lg px-3 py-2 outline-none"
           >
-            <option value="" className="text-gray-800">Tüm Etiketler</option>
+            <option value="" className="text-gray-800">All Labels</option>
             {board.labels.map((l) => (
               <option key={l.id} value={l.id} className="text-gray-800">
                 {l.name}
@@ -280,7 +280,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
           </Button>
 
           <Button size="sm" variant="secondary" onClick={() => setShowMembers(true)}>
-            Üyeler ({board.members.length})
+            Members ({board.members.length})
           </Button>
         </div>
       </div>

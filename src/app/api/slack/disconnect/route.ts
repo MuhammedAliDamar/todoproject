@@ -6,7 +6,7 @@ export async function POST(req: NextRequest) {
   try {
     const { boardId } = await req.json();
 
-    if (!boardId) return errorResponse("boardId gerekli", 400);
+    if (!boardId) return errorResponse("boardId is required", 400);
 
     await prisma.board.update({
       where: { id: boardId },
@@ -18,8 +18,8 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return jsonResponse({ message: "Slack bağlantısı kaldırıldı" });
+    return jsonResponse({ message: "Slack disconnected" });
   } catch {
-    return errorResponse("İşlem başarısız", 500);
+    return errorResponse("Operation failed", 500);
   }
 }

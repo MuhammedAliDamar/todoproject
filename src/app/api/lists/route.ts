@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     const { title, boardId } = await req.json();
 
     if (!title?.trim() || !boardId) {
-      return errorResponse("Başlık ve board ID gereklidir", 400);
+      return errorResponse("Title and board ID are required", 400);
     }
 
     // Check board access
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    if (!board) return errorResponse("Board bulunamadı", 404);
+    if (!board) return errorResponse("Board not found", 404);
 
     // Get max position
     const lastList = await prisma.list.findFirst({
@@ -38,6 +38,6 @@ export async function POST(req: NextRequest) {
 
     return jsonResponse(list, 201);
   } catch {
-    return errorResponse("Sunucu hatası", 500);
+    return errorResponse("Server error", 500);
   }
 }

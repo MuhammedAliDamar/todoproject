@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   try {
     const payload = await getUserFromRequest(req);
     if (!payload) {
-      return errorResponse("Yetkisiz erişim", 401);
+      return errorResponse("Unauthorized", 401);
     }
 
     const user = await prisma.user.findUnique({
@@ -16,11 +16,11 @@ export async function GET(req: NextRequest) {
     });
 
     if (!user) {
-      return errorResponse("Kullanıcı bulunamadı", 404);
+      return errorResponse("User not found", 404);
     }
 
     return jsonResponse({ user });
   } catch {
-    return errorResponse("Sunucu hatası", 500);
+    return errorResponse("Server error", 500);
   }
 }

@@ -37,7 +37,7 @@ export default function AddList({ boardId, onAdd }: AddListProps) {
         onClick={() => setOpen(true)}
         className="flex-shrink-0 w-72 bg-white/30 hover:bg-white/50 text-white rounded-xl p-3 text-sm font-medium text-left transition"
       >
-        + Liste Ekle
+        + Add List
       </button>
     );
   }
@@ -49,13 +49,13 @@ export default function AddList({ boardId, onAdd }: AddListProps) {
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Liste basligi..."
+          placeholder="List title..."
           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none mb-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           autoFocus
         />
         <div className="flex gap-2">
-          <Button size="sm" type="submit" disabled={loading}>Ekle</Button>
-          <Button size="sm" variant="ghost" type="button" onClick={() => { setOpen(false); setTitle(""); }}>Iptal</Button>
+          <Button size="sm" type="submit" disabled={loading}>Add</Button>
+          <Button size="sm" variant="ghost" type="button" onClick={() => { setOpen(false); setTitle(""); }}>Cancel</Button>
         </div>
       </form>
     </div>

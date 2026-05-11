@@ -37,7 +37,7 @@ export default function AddCard({ listId, onAdd }: AddCardProps) {
         onClick={() => setOpen(true)}
         className="w-full text-left text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg p-2 transition"
       >
-        + Kart Ekle
+        + Add Card
       </button>
     );
   }
@@ -47,7 +47,7 @@ export default function AddCard({ listId, onAdd }: AddCardProps) {
       <textarea
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        placeholder="Kart basligi..."
+        placeholder="Card title..."
         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
         rows={2}
         autoFocus
@@ -59,8 +59,8 @@ export default function AddCard({ listId, onAdd }: AddCardProps) {
         }}
       />
       <div className="flex gap-2 mt-1">
-        <Button size="sm" type="submit" disabled={loading}>Ekle</Button>
-        <Button size="sm" variant="ghost" type="button" onClick={() => { setOpen(false); setTitle(""); }}>Iptal</Button>
+        <Button size="sm" type="submit" disabled={loading}>Add</Button>
+        <Button size="sm" variant="ghost" type="button" onClick={() => { setOpen(false); setTitle(""); }}>Cancel</Button>
       </div>
     </form>
   );

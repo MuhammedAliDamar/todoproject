@@ -19,7 +19,7 @@ export default function RegisterPage() {
     try {
       await register(name, email, password);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Kayit basarisiz");
+      setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
       setLoading(false);
     }
@@ -30,7 +30,7 @@ export default function RegisterPage() {
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800 dark:text-white">DaoTasks</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-2">Yeni hesap olusturun</p>
+          <p className="text-gray-500 dark:text-gray-400 mt-2">Create a new account</p>
         </div>
 
         {error && (
@@ -41,13 +41,13 @@ export default function RegisterPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Isim</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
-              placeholder="Adiniz Soyadiniz"
+              placeholder="Your full name"
               required
             />
           </div>
@@ -59,19 +59,19 @@ export default function RegisterPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
-              placeholder="ornek@email.com"
+              placeholder="example@email.com"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sifre</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
-              placeholder="En az 8 karakter"
+              placeholder="At least 8 characters"
               minLength={8}
               required
             />
@@ -82,14 +82,14 @@ export default function RegisterPage() {
             disabled={loading}
             className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? "Kayit yapiliyor..." : "Kayit Ol"}
+            {loading ? "Signing up..." : "Sign Up"}
           </button>
         </form>
 
         <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">
-          Zaten hesabiniz var mi?{" "}
+          Already have an account?{" "}
           <Link href="/login" className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
-            Giris Yap
+            Sign In
           </Link>
         </p>
       </div>

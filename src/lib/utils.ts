@@ -10,8 +10,8 @@ export function errorResponse(message: string, status = 400) {
 }
 
 /**
- * Kullanıcının bir karta (ve dolayısıyla board'a) erişimi olup olmadığını kontrol eder.
- * Kartın board'una üye veya sahip olması gerekir.
+ * Checks whether the user has access to a card (and therefore its board).
+ * Requires the user to be a member or owner of the card's board.
  */
 export async function verifyCardAccess(cardId: string, userId: string): Promise<boolean> {
   const card = await prisma.card.findUnique({
@@ -27,7 +27,7 @@ export async function verifyCardAccess(cardId: string, userId: string): Promise<
 }
 
 /**
- * Kullanıcının bir listeye (ve dolayısıyla board'a) erişimi olup olmadığını kontrol eder.
+ * Checks whether the user has access to a list (and therefore its board).
  */
 export async function verifyListAccess(listId: string, userId: string): Promise<boolean> {
   const list = await prisma.list.findUnique({

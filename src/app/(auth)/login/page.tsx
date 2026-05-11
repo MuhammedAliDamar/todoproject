@@ -18,7 +18,7 @@ export default function LoginPage() {
     try {
       await login(email, password);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Giris basarisiz");
+      setError(err instanceof Error ? err.message : "Login failed");
     } finally {
       setLoading(false);
     }
@@ -29,7 +29,7 @@ export default function LoginPage() {
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800 dark:text-white">DaoTasks</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-2">Hesabiniza giris yapin</p>
+          <p className="text-gray-500 dark:text-gray-400 mt-2">Sign in to your account</p>
         </div>
 
         {error && (
@@ -46,13 +46,13 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
-              placeholder="ornek@email.com"
+              placeholder="example@email.com"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sifre</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
             <input
               type="password"
               value={password}
@@ -68,14 +68,14 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? "Giris yapiliyor..." : "Giris Yap"}
+            {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
 
         <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">
-          Hesabiniz yok mu?{" "}
+          Don&apos;t have an account?{" "}
           <Link href="/register" className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
-            Kayit Ol
+            Sign Up
           </Link>
         </p>
       </div>

@@ -21,7 +21,7 @@ export async function middleware(req: NextRequest) {
   if (!token) {
     // API routes return 401
     if (pathname.startsWith("/api/")) {
-      return NextResponse.json({ error: "Yetkisiz erişim" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     // Pages redirect to login
     return NextResponse.redirect(new URL("/login", req.url));
@@ -30,7 +30,7 @@ export async function middleware(req: NextRequest) {
   const payload = await verifyToken(token);
   if (!payload) {
     if (pathname.startsWith("/api/")) {
-      return NextResponse.json({ error: "Geçersiz token" }, { status: 401 });
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
     const response = NextResponse.redirect(new URL("/login", req.url));
     response.cookies.delete("token");
@@ -51,7 +51,7 @@ export async function middleware(req: NextRequest) {
     request: { headers: requestHeaders },
   });
 
-  // Güvenlik header'ları
+  // Security headers
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-XSS-Protection", "1; mode=block");

@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
     const { title, listId } = await req.json();
 
     if (!title?.trim() || !listId) {
-      return errorResponse("Başlık ve liste ID gereklidir", 400);
+      return errorResponse("Title and list ID are required", 400);
     }
 
     // Get max position in the list
@@ -35,13 +35,13 @@ export async function POST(req: NextRequest) {
     // Log activity
     await prisma.activity.create({
       data: {
-        action: `"${card.title}" kartını oluşturdu`,
+        action: `created card "${card.title}"`,
         cardId: card.id,
         userId,
       },
     });
 
-    // Slack bildirimi
+    // Slack notification
     const list = await prisma.list.findUnique({
       where: { id: listId },
       include: { board: { select: { id: true, title: true } } },
@@ -53,6 +53,6 @@ export async function POST(req: NextRequest) {
 
     return jsonResponse(card, 201);
   } catch {
-    return errorResponse("Sunucu hatası", 500);
+    return errorResponse("Server error", 500);
   }
 }

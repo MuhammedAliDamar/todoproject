@@ -79,7 +79,7 @@ export default function SlackSettings({
   };
 
   const disconnectSlack = async () => {
-    if (!confirm("Slack bağlantısını kaldırmak istediğinize emin misiniz?")) return;
+    if (!confirm("Are you sure you want to disconnect Slack?")) return;
     try {
       await fetch("/api/slack/disconnect", {
         method: "POST",
@@ -92,55 +92,55 @@ export default function SlackSettings({
   };
 
   return (
-    <Modal isOpen onClose={onClose} title="Slack Ayarları">
+    <Modal isOpen onClose={onClose} title="Slack Settings">
       <div className="space-y-4">
         {!slackConnected ? (
-          // Slack'e bağlı değil
+          // Not connected to Slack
           <div className="text-center py-6">
             <div className="w-16 h-16 mx-auto mb-4 bg-purple-100 dark:bg-purple-900/30 rounded-2xl flex items-center justify-center">
               <svg className="w-8 h-8 text-purple-600 dark:text-purple-400" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z" />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">Slack&apos;e Bağlan</h3>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">Connect to Slack</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              Board bildirimlerini Slack kanalınıza gönderin.
+              Send board notifications to your Slack channel.
               <br />
-              Kart oluşturma, yorum, taşıma gibi olaylar Slack&apos;e iletilir.
+              Events like card creation, comments, and moves are forwarded to Slack.
             </p>
-            <Button onClick={connectSlack}>Slack ile Bağlan</Button>
+            <Button onClick={connectSlack}>Connect with Slack</Button>
           </div>
         ) : (
-          // Slack'e bağlı
+          // Connected to Slack
           <div>
             <div className="flex items-center gap-2 mb-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
               <div className="w-2 h-2 bg-green-500 rounded-full" />
               <span className="text-sm text-green-700 dark:text-green-400 font-medium">
-                Slack bağlı{slackTeamName ? ` — ${slackTeamName}` : ""}
+                Slack connected{slackTeamName ? ` — ${slackTeamName}` : ""}
               </span>
             </div>
 
             {slackChannelId && slackChannelName && (
               <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                 <p className="text-sm text-blue-700 dark:text-blue-400">
-                  Bildirimler <strong>#{slackChannelName}</strong> kanalına gönderiliyor
+                  Notifications are sent to <strong>#{slackChannelName}</strong>
                 </p>
               </div>
             )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Bildirim Kanalı Seçin
+                Select Notification Channel
               </label>
               {loadingChannels ? (
-                <p className="text-sm text-gray-400">Kanallar yükleniyor...</p>
+                <p className="text-sm text-gray-400">Loading channels...</p>
               ) : (
                 <select
                   value={selectedChannel}
                   onChange={(e) => setSelectedChannel(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">Kanal seçin...</option>
+                  <option value="">Select a channel...</option>
                   {channels.map((ch) => (
                     <option key={ch.id} value={ch.id}>
                       {ch.isPrivate ? "🔒 " : "# "}{ch.name}
@@ -155,12 +155,12 @@ export default function SlackSettings({
                 onClick={disconnectSlack}
                 className="text-sm text-red-500 hover:text-red-700 dark:hover:text-red-400 transition"
               >
-                Bağlantıyı Kes
+                Disconnect
               </button>
               <div className="flex gap-2">
-                <Button variant="secondary" onClick={onClose}>Kapat</Button>
+                <Button variant="secondary" onClick={onClose}>Close</Button>
                 <Button onClick={saveChannel} disabled={!selectedChannel || saving}>
-                  {saving ? "Kaydediliyor..." : "Kaydet"}
+                  {saving ? "Saving..." : "Save"}
                 </Button>
               </div>
             </div>

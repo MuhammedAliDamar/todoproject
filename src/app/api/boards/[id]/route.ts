@@ -36,10 +36,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     });
 
     if (!board) {
-      return errorResponse("Board bulunamadı", 404);
+      return errorResponse("Board not found", 404);
     }
 
-    // Slack bilgilerini ayrı çek (include'da gelmediği için)
+    // Fetch Slack info separately (not included in include)
     const slackInfo = await prisma.board.findUnique({
       where: { id },
       select: { slackToken: true, slackChannelId: true, slackChannelName: true, slackTeamName: true },
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       slackTeamName: slackInfo?.slackTeamName || null,
     });
   } catch {
-    return errorResponse("Sunucu hatası", 500);
+    return errorResponse("Server error", 500);
   }
 }
 
@@ -74,7 +74,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     });
 
     if (!board) {
-      return errorResponse("Board bulunamadı veya yetkiniz yok", 403);
+      return errorResponse("Board not found or you don't have permission", 403);
     }
 
     const updated = await prisma.board.update({
@@ -89,7 +89,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     return jsonResponse(updated);
   } catch {
-    return errorResponse("Sunucu hatası", 500);
+    return errorResponse("Server error", 500);
   }
 }
 
@@ -103,13 +103,13 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     });
 
     if (!board) {
-      return errorResponse("Board bulunamadı veya yetkiniz yok", 404);
+      return errorResponse("Board not found or you don't have permission", 404);
     }
 
     await prisma.board.delete({ where: { id } });
 
-    return jsonResponse({ message: "Board silindi" });
+    return jsonResponse({ message: "Board deleted" });
   } catch {
-    return errorResponse("Sunucu hatası", 500);
+    return errorResponse("Server error", 500);
   }
 }

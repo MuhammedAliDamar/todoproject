@@ -3,14 +3,14 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
-  const boardId = req.nextUrl.searchParams.get("state"); // boardId state'ten geliyor
+  const boardId = req.nextUrl.searchParams.get("state"); // boardId comes from state
 
   if (!code || !boardId) {
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/boards?slack=error`);
   }
 
   try {
-    // Slack'ten access token al
+    // Get access token from Slack
     const tokenRes = await fetch("https://slack.com/api/oauth.v2.access", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -25,11 +25,11 @@ export async function GET(req: NextRequest) {
     const tokenData = await tokenRes.json();
 
     if (!tokenData.ok) {
-      console.error("Slack OAuth hatası:", tokenData.error);
+      console.error("Slack OAuth error:", tokenData.error);
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/board/${boardId}?slack=error`);
     }
 
-    // Bot token'ı ve workspace bilgisini kaydet
+    // Save bot token and workspace info
     await prisma.board.update({
       where: { id: boardId },
       data: {
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/board/${boardId}?slack=connected`);
   } catch (err) {
-    console.error("Slack callback hatası:", err);
+    console.error("Slack callback error:", err);
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/board/${boardId}?slack=error`);
   }
 }

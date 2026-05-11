@@ -65,16 +65,16 @@ export default function NotificationDropdown() {
       {open && (
         <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
           <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="font-semibold text-gray-800 dark:text-gray-200 text-sm">Bildirimler</h3>
+            <h3 className="font-semibold text-gray-800 dark:text-gray-200 text-sm">Notifications</h3>
             {unreadCount > 0 && (
               <button onClick={markAllRead} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
-                Tumunu okundu isaretle
+                Mark all as read
               </button>
             )}
           </div>
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
-              <p className="p-4 text-sm text-gray-500 dark:text-gray-400 text-center">Bildirim yok</p>
+              <p className="p-4 text-sm text-gray-500 dark:text-gray-400 text-center">No notifications</p>
             ) : (
               notifications.map((n) => (
                 <div
@@ -83,7 +83,7 @@ export default function NotificationDropdown() {
                 >
                   <p className="text-gray-700 dark:text-gray-300">{n.message}</p>
                   <p className="text-xs text-gray-400 mt-1">
-                    {new Date(n.createdAt).toLocaleDateString("tr-TR")}
+                    {new Date(n.createdAt).toLocaleDateString("en-US")}
                   </p>
                 </div>
               ))

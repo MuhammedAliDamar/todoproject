@@ -8,17 +8,17 @@ export async function POST(req: NextRequest) {
     const { email, password } = await req.json();
 
     if (!email || !password) {
-      return errorResponse("Email ve şifre gereklidir", 400);
+      return errorResponse("Email and password are required", 400);
     }
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      return errorResponse("Geçersiz email veya şifre", 401);
+      return errorResponse("Invalid email or password", 401);
     }
 
     const isValid = await verifyPassword(password, user.password);
     if (!isValid) {
-      return errorResponse("Geçersiz email veya şifre", 401);
+      return errorResponse("Invalid email or password", 401);
     }
 
     const token = await signToken({ userId: user.id, email: user.email });
@@ -38,6 +38,6 @@ export async function POST(req: NextRequest) {
 
     return response;
   } catch {
-    return errorResponse("Sunucu hatası", 500);
+    return errorResponse("Server error", 500);
   }
 }

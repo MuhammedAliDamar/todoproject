@@ -9,7 +9,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const userId = req.headers.get("x-user-id")!;
 
     const hasAccess = await verifyCardAccess(id, userId);
-    if (!hasAccess) return errorResponse("Kart bulunamadı veya yetkiniz yok", 403);
+    if (!hasAccess) return errorResponse("Card not found or you don't have permission", 403);
 
     const card = await prisma.card.findUnique({
       where: { id },
@@ -30,11 +30,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       },
     });
 
-    if (!card) return errorResponse("Kart bulunamadı", 404);
+    if (!card) return errorResponse("Card not found", 404);
 
     return jsonResponse(card);
   } catch {
-    return errorResponse("Sunucu hatası", 500);
+    return errorResponse("Server error", 500);
   }
 }
 
@@ -44,7 +44,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const userId = req.headers.get("x-user-id")!;
 
     const hasAccess = await verifyCardAccess(id, userId);
-    if (!hasAccess) return errorResponse("Kart bulunamadı veya yetkiniz yok", 403);
+    if (!hasAccess) return errorResponse("Card not found or you don't have permission", 403);
 
     const data = await req.json();
 
@@ -73,24 +73,24 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       const oldList = await prisma.list.findUnique({ where: { id: data.listId }, select: { title: true } });
       await prisma.activity.create({
         data: {
-          action: `"${card.title}" kartını taşıdı`,
+          action: `moved card "${card.title}"`,
           cardId: card.id,
           userId,
         },
       });
       if (user && oldList) {
-        notifyCardMoved(id, user.name, card.title, "önceki liste", oldList.title);
+        notifyCardMoved(id, user.name, card.title, "previous list", oldList.title);
       }
     }
 
     // Slack for due date
     if (data.dueDate && user) {
-      notifyDueDateSet(id, user.name, card.title, new Date(data.dueDate).toLocaleDateString("tr-TR"));
+      notifyDueDateSet(id, user.name, card.title, new Date(data.dueDate).toLocaleDateString("en-US"));
     }
 
     return jsonResponse(card);
   } catch {
-    return errorResponse("Sunucu hatası", 500);
+    return errorResponse("Server error", 500);
   }
 }
 
@@ -100,9 +100,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const userId = req.headers.get("x-user-id")!;
 
     const hasAccess = await verifyCardAccess(id, userId);
-    if (!hasAccess) return errorResponse("Kart bulunamadı veya yetkiniz yok", 403);
+    if (!hasAccess) return errorResponse("Card not found or you don't have permission", 403);
 
-    // Slack bildirimi için kart bilgisini sil öncesi al
+    // Capture card info before deletion for Slack notification
     const cardInfo = await prisma.card.findUnique({
       where: { id },
       select: { title: true, list: { select: { board: { select: { id: true, title: true } } } } },
@@ -115,8 +115,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       notifyCardDeleted(cardInfo.list.board.id, user.name, cardInfo.title, cardInfo.list.board.title);
     }
 
-    return jsonResponse({ message: "Kart silindi" });
+    return jsonResponse({ message: "Card deleted" });
   } catch {
-    return errorResponse("Sunucu hatası", 500);
+    return errorResponse("Server error", 500);
   }
 }

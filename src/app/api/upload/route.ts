@@ -26,41 +26,41 @@ export async function POST(req: NextRequest) {
     const file = formData.get("file") as File | null;
 
     if (!file) {
-      return errorResponse("Dosya gereklidir", 400);
+      return errorResponse("File is required", 400);
     }
 
-    // Dosya boyutu kontrolü
+    // File size check
     if (file.size > MAX_FILE_SIZE) {
-      return errorResponse("Dosya boyutu en fazla 5MB olabilir", 400);
+      return errorResponse("File size cannot exceed 5MB", 400);
     }
 
-    // MIME type kontrolü
+    // MIME type check
     if (!ALLOWED_TYPES.includes(file.type)) {
-      return errorResponse("Bu dosya türü desteklenmiyor", 400);
+      return errorResponse("This file type is not supported", 400);
     }
 
-    // Uzantı kontrolü
+    // Extension check
     const ext = path.extname(file.name).toLowerCase();
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
-      return errorResponse("Bu dosya uzantısı desteklenmiyor", 400);
+      return errorResponse("This file extension is not supported", 400);
     }
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Rastgele dosya adı oluştur (tahmin edilemez)
+    // Generate random filename (unpredictable)
     const randomId = crypto.randomUUID();
     const safeName = `${randomId}${ext}`;
     const uploadDir = path.join(process.cwd(), "public", "uploads");
 
-    // Upload dizinini oluştur (yoksa)
+    // Create upload directory if missing
     await mkdir(uploadDir, { recursive: true });
 
     const filePath = path.join(uploadDir, safeName);
 
-    // Path traversal kontrolü
+    // Path traversal check
     if (!filePath.startsWith(uploadDir)) {
-      return errorResponse("Geçersiz dosya yolu", 400);
+      return errorResponse("Invalid file path", 400);
     }
 
     await writeFile(filePath, buffer);
@@ -70,6 +70,6 @@ export async function POST(req: NextRequest) {
       url: `/uploads/${safeName}`,
     });
   } catch {
-    return errorResponse("Dosya yükleme hatası", 500);
+    return errorResponse("File upload error", 500);
   }
 }

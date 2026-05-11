@@ -45,7 +45,7 @@ export default function List({ id, title, cards, onRefresh, onCardClick, onDelet
   };
 
   const deleteList = async () => {
-    if (!confirm("Bu listeyi silmek istediginize emin misiniz?")) return;
+    if (!confirm("Are you sure you want to delete this list?")) return;
     await fetch(`/api/lists/${id}`, { method: "DELETE" });
     onDelete();
   };
@@ -85,7 +85,7 @@ export default function List({ id, title, cards, onRefresh, onCardClick, onDelet
                 onClick={() => { deleteList(); setShowMenu(false); }}
                 className="w-full text-left px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-gray-50 dark:hover:bg-gray-600"
               >
-                Listeyi Sil
+                Delete List
               </button>
             </div>
           )}

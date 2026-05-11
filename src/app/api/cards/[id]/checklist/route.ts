@@ -8,7 +8,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const userId = req.headers.get("x-user-id")!;
 
     const hasAccess = await verifyCardAccess(cardId, userId);
-    if (!hasAccess) return errorResponse("Yetkiniz yok", 403);
+    if (!hasAccess) return errorResponse("You don't have permission", 403);
 
     const { title, itemContent, checklistId, itemId, isCompleted } = await req.json();
 
@@ -38,9 +38,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return jsonResponse(item);
     }
 
-    return errorResponse("Geçersiz istek", 400);
+    return errorResponse("Invalid request", 400);
   } catch {
-    return errorResponse("Sunucu hatası", 500);
+    return errorResponse("Server error", 500);
   }
 }
 
@@ -50,7 +50,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const userId = req.headers.get("x-user-id")!;
 
     const hasAccess = await verifyCardAccess(cardId, userId);
-    if (!hasAccess) return errorResponse("Yetkiniz yok", 403);
+    if (!hasAccess) return errorResponse("You don't have permission", 403);
 
     const { checklistId, itemId } = await req.json();
 
@@ -60,8 +60,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       await prisma.checklist.delete({ where: { id: checklistId } });
     }
 
-    return jsonResponse({ message: "Silindi" });
+    return jsonResponse({ message: "Deleted" });
   } catch {
-    return errorResponse("Sunucu hatası", 500);
+    return errorResponse("Server error", 500);
   }
 }

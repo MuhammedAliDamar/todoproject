@@ -9,7 +9,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const userId = req.headers.get("x-user-id")!;
 
     const hasAccess = await verifyCardAccess(cardId, userId);
-    if (!hasAccess) return errorResponse("Yetkiniz yok", 403);
+    if (!hasAccess) return errorResponse("You don't have permission", 403);
 
     const comments = await prisma.comment.findMany({
       where: { cardId },
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     return jsonResponse(comments);
   } catch {
-    return errorResponse("Sunucu hatasi", 500);
+    return errorResponse("Server error", 500);
   }
 }
 
@@ -31,12 +31,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const userId = req.headers.get("x-user-id")!;
 
     const hasAccess = await verifyCardAccess(cardId, userId);
-    if (!hasAccess) return errorResponse("Yetkiniz yok", 403);
+    if (!hasAccess) return errorResponse("You don't have permission", 403);
 
     const { content } = await req.json();
 
     if (!content?.trim()) {
-      return errorResponse("Yorum icerigi gereklidir", 400);
+      return errorResponse("Comment content is required", 400);
     }
 
     const comment = await prisma.comment.create({
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       },
     });
 
-    // Slack bildirimi
+    // Slack notification
     const card = await prisma.card.findUnique({
       where: { id: cardId },
       select: { title: true, list: { select: { board: { select: { title: true } } } } },
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     return jsonResponse(comment, 201);
   } catch {
-    return errorResponse("Sunucu hatasi", 500);
+    return errorResponse("Server error", 500);
   }
 }
 
@@ -69,12 +69,12 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     const comment = await prisma.comment.findUnique({ where: { id: commentId } });
     if (!comment || comment.userId !== userId) {
-      return errorResponse("Yorum bulunamadi veya yetkiniz yok", 403);
+      return errorResponse("Comment not found or you don't have permission", 403);
     }
 
     await prisma.comment.delete({ where: { id: commentId } });
-    return jsonResponse({ message: "Yorum silindi" });
+    return jsonResponse({ message: "Comment deleted" });
   } catch {
-    return errorResponse("Sunucu hatasi", 500);
+    return errorResponse("Server error", 500);
   }
 }

@@ -93,7 +93,7 @@ export default function Checklist({ cardId, checklists, onUpdate }: ChecklistPro
                 </svg>
                 {cl.title}
               </h4>
-              <button onClick={() => deleteChecklist(cl.id)} className="text-xs text-gray-400 hover:text-red-500">Sil</button>
+              <button onClick={() => deleteChecklist(cl.id)} className="text-xs text-gray-400 hover:text-red-500">Delete</button>
             </div>
 
             <div className="flex items-center gap-2">
@@ -135,11 +135,11 @@ export default function Checklist({ cardId, checklists, onUpdate }: ChecklistPro
                 type="text"
                 value={newItemContent[cl.id] || ""}
                 onChange={(e) => setNewItemContent((prev) => ({ ...prev, [cl.id]: e.target.value }))}
-                placeholder="Yeni oge ekle..."
+                placeholder="Add a new item..."
                 className="flex-1 px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 onKeyDown={(e) => e.key === "Enter" && addItem(cl.id)}
               />
-              <Button size="sm" onClick={() => addItem(cl.id)}>Ekle</Button>
+              <Button size="sm" onClick={() => addItem(cl.id)}>Add</Button>
             </div>
           </div>
         );
@@ -151,17 +151,17 @@ export default function Checklist({ cardId, checklists, onUpdate }: ChecklistPro
             type="text"
             value={newChecklistTitle}
             onChange={(e) => setNewChecklistTitle(e.target.value)}
-            placeholder="Checklist basligi..."
+            placeholder="Checklist title..."
             className="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             autoFocus
             onKeyDown={(e) => e.key === "Enter" && addChecklist()}
           />
-          <Button size="sm" onClick={addChecklist}>Ekle</Button>
-          <Button size="sm" variant="ghost" onClick={() => setShowAddChecklist(false)}>Iptal</Button>
+          <Button size="sm" onClick={addChecklist}>Add</Button>
+          <Button size="sm" variant="ghost" onClick={() => setShowAddChecklist(false)}>Cancel</Button>
         </div>
       ) : (
         <Button size="sm" variant="secondary" onClick={() => setShowAddChecklist(true)}>
-          + Checklist Ekle
+          + Add Checklist
         </Button>
       )}
     </div>

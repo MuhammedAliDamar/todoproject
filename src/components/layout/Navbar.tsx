@@ -33,7 +33,7 @@ export default function Navbar() {
         <button
           onClick={toggleTheme}
           className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
-          title={theme === "dark" ? "Açık mod" : "Koyu mod"}
+          title={theme === "dark" ? "Light mode" : "Dark mode"}
         >
           {theme === "dark" ? (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -63,7 +63,7 @@ export default function Navbar() {
                 onClick={logout}
                 className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-50 dark:hover:bg-gray-700"
               >
-                Cikis Yap
+                Sign Out
               </button>
             </div>
           )}

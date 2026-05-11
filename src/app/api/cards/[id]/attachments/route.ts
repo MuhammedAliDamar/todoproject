@@ -8,17 +8,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const userId = req.headers.get("x-user-id")!;
 
     const hasAccess = await verifyCardAccess(cardId, userId);
-    if (!hasAccess) return errorResponse("Yetkiniz yok", 403);
+    if (!hasAccess) return errorResponse("You don't have permission", 403);
 
     const { filename, url } = await req.json();
 
     if (!filename || !url) {
-      return errorResponse("Dosya adı ve URL gereklidir", 400);
+      return errorResponse("Filename and URL are required", 400);
     }
 
-    // URL'nin sadece yerel upload olmasını zorunlu kıl
+    // Restrict URL to local uploads only
     if (!url.startsWith("/uploads/")) {
-      return errorResponse("Geçersiz dosya URL'si", 400);
+      return errorResponse("Invalid file URL", 400);
     }
 
     const attachment = await prisma.attachment.create({
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     return jsonResponse(attachment, 201);
   } catch {
-    return errorResponse("Sunucu hatası", 500);
+    return errorResponse("Server error", 500);
   }
 }
 
@@ -37,12 +37,12 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const userId = req.headers.get("x-user-id")!;
 
     const hasAccess = await verifyCardAccess(cardId, userId);
-    if (!hasAccess) return errorResponse("Yetkiniz yok", 403);
+    if (!hasAccess) return errorResponse("You don't have permission", 403);
 
     const { attachmentId } = await req.json();
     await prisma.attachment.delete({ where: { id: attachmentId } });
-    return jsonResponse({ message: "Dosya silindi" });
+    return jsonResponse({ message: "File deleted" });
   } catch {
-    return errorResponse("Sunucu hatası", 500);
+    return errorResponse("Server error", 500);
   }
 }

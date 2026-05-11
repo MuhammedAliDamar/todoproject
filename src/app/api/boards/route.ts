@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 
     return jsonResponse(boards);
   } catch {
-    return errorResponse("Sunucu hatası", 500);
+    return errorResponse("Server error", 500);
   }
 }
 
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     const { title, background } = await req.json();
 
     if (!title?.trim()) {
-      return errorResponse("Board başlığı gereklidir", 400);
+      return errorResponse("Board title is required", 400);
     }
 
     const board = await prisma.board.create({
@@ -49,12 +49,12 @@ export async function POST(req: NextRequest) {
         labels: {
           createMany: {
             data: [
-              { name: "Öncelikli", color: "#ef4444" },
-              { name: "Devam Ediyor", color: "#f59e0b" },
-              { name: "Tamamlandı", color: "#22c55e" },
+              { name: "Priority", color: "#ef4444" },
+              { name: "In Progress", color: "#f59e0b" },
+              { name: "Completed", color: "#22c55e" },
               { name: "Bug", color: "#8b5cf6" },
-              { name: "Özellik", color: "#3b82f6" },
-              { name: "İyileştirme", color: "#06b6d4" },
+              { name: "Feature", color: "#3b82f6" },
+              { name: "Improvement", color: "#06b6d4" },
             ],
           },
         },
@@ -69,6 +69,6 @@ export async function POST(req: NextRequest) {
 
     return jsonResponse(board, 201);
   } catch {
-    return errorResponse("Sunucu hatası", 500);
+    return errorResponse("Server error", 500);
   }
 }

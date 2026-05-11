@@ -5,7 +5,7 @@ import { jsonResponse, errorResponse } from "@/lib/utils";
 export async function GET(req: NextRequest) {
   try {
     const boardId = req.nextUrl.searchParams.get("boardId");
-    if (!boardId) return errorResponse("boardId gerekli", 400);
+    if (!boardId) return errorResponse("boardId is required", 400);
 
     const board = await prisma.board.findUnique({
       where: { id: boardId },
@@ -13,16 +13,16 @@ export async function GET(req: NextRequest) {
     });
 
     if (!board?.slackToken) {
-      return errorResponse("Bu board Slack'e bağlı değil", 400);
+      return errorResponse("This board is not connected to Slack", 400);
     }
 
-    // Public kanalları çek
+    // Fetch public channels
     const publicRes = await fetch("https://slack.com/api/conversations.list?types=public_channel&limit=200&exclude_archived=true", {
       headers: { Authorization: `Bearer ${board.slackToken}` },
     });
     const publicData = await publicRes.json();
 
-    // Private kanalları çek
+    // Fetch private channels
     const privateRes = await fetch("https://slack.com/api/conversations.list?types=private_channel&limit=200&exclude_archived=true", {
       headers: { Authorization: `Bearer ${board.slackToken}` },
     });
@@ -39,17 +39,17 @@ export async function GET(req: NextRequest) {
 
     return jsonResponse(channels);
   } catch {
-    return errorResponse("Slack kanalları alınamadı", 500);
+    return errorResponse("Failed to fetch Slack channels", 500);
   }
 }
 
-// Kanal seçimi kaydetme
+// Save channel selection
 export async function POST(req: NextRequest) {
   try {
     const { boardId, channelId, channelName } = await req.json();
 
     if (!boardId || !channelId) {
-      return errorResponse("boardId ve channelId gerekli", 400);
+      return errorResponse("boardId and channelId are required", 400);
     }
 
     const board = await prisma.board.findUnique({
@@ -58,10 +58,10 @@ export async function POST(req: NextRequest) {
     });
 
     if (!board?.slackToken) {
-      return errorResponse("Bu board Slack'e bağlı değil", 400);
+      return errorResponse("This board is not connected to Slack", 400);
     }
 
-    // Bot'u kanala ekle (gerekiyorsa)
+    // Add bot to channel (if needed)
     await fetch("https://slack.com/api/conversations.join", {
       method: "POST",
       headers: {
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({ channel: channelId }),
     });
 
-    // Board'a kanalı kaydet
+    // Save channel to board
     await prisma.board.update({
       where: { id: boardId },
       data: {
@@ -80,8 +80,8 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return jsonResponse({ message: "Kanal seçildi", channelId, channelName });
+    return jsonResponse({ message: "Channel selected", channelId, channelName });
   } catch {
-    return errorResponse("Kanal seçilemedi", 500);
+    return errorResponse("Failed to select channel", 500);
   }
 }

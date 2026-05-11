@@ -15,12 +15,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     });
 
     if (!membership) {
-      return errorResponse("Sadece board sahibi üye ekleyebilir", 403);
+      return errorResponse("Only the board owner can add members", 403);
     }
 
     const targetUser = await prisma.user.findUnique({ where: { email } });
     if (!targetUser) {
-      return errorResponse("Kullanıcı bulunamadı", 404);
+      return errorResponse("User not found", 404);
     }
 
     const existing = await prisma.boardMember.findUnique({
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     });
 
     if (existing) {
-      return errorResponse("Kullanıcı zaten üye", 400);
+      return errorResponse("User is already a member", 400);
     }
 
     const member = await prisma.boardMember.create({
@@ -39,14 +39,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // Create notification for the invited user
     await prisma.notification.create({
       data: {
-        message: `Bir board'a davet edildiniz`,
+        message: `You have been invited to a board`,
         type: "BOARD_INVITE",
         userId: targetUser.id,
         boardId,
       },
     });
 
-    // Slack bildirimi
+    // Slack notification
     const board = await prisma.board.findUnique({ where: { id: boardId }, select: { title: true } });
     const addedByUser = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
     if (board && addedByUser) {
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     return jsonResponse(member, 201);
   } catch {
-    return errorResponse("Sunucu hatası", 500);
+    return errorResponse("Server error", 500);
   }
 }
 
@@ -70,18 +70,18 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     });
 
     if (!membership) {
-      return errorResponse("Sadece board sahibi üye çıkarabilir", 403);
+      return errorResponse("Only the board owner can remove members", 403);
     }
 
     const target = await prisma.boardMember.findUnique({ where: { id: memberId } });
     if (!target || target.role === "OWNER") {
-      return errorResponse("Bu üye çıkarılamaz", 400);
+      return errorResponse("This member cannot be removed", 400);
     }
 
     await prisma.boardMember.delete({ where: { id: memberId } });
 
-    return jsonResponse({ message: "Üye çıkarıldı" });
+    return jsonResponse({ message: "Member removed" });
   } catch {
-    return errorResponse("Sunucu hatası", 500);
+    return errorResponse("Server error", 500);
   }
 }

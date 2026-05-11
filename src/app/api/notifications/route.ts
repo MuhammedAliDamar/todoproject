@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
     return jsonResponse(notifications);
   } catch {
-    return errorResponse("Sunucu hatası", 500);
+    return errorResponse("Server error", 500);
   }
 }
 
@@ -27,8 +27,8 @@ export async function PUT(req: NextRequest) {
       data: { isRead: true },
     });
 
-    return jsonResponse({ message: "Tüm bildirimler okundu" });
+    return jsonResponse({ message: "All notifications marked as read" });
   } catch {
-    return errorResponse("Sunucu hatası", 500);
+    return errorResponse("Server error", 500);
   }
 }

@@ -41,14 +41,14 @@ export default function MemberList({ boardId, members, isOwner, onClose, onUpdat
       setEmail("");
       onUpdate();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Hata olustu");
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
     }
   };
 
   const removeMember = async (memberId: string) => {
-    if (!confirm("Bu uyeyi cikarmak istediginize emin misiniz?")) return;
+    if (!confirm("Are you sure you want to remove this member?")) return;
     await fetch(`/api/boards/${boardId}/members`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -59,15 +59,15 @@ export default function MemberList({ boardId, members, isOwner, onClose, onUpdat
 
   const roleLabel = (r: string) => {
     switch (r) {
-      case "OWNER": return "Sahip";
-      case "MEMBER": return "Uye";
-      case "VIEWER": return "Izleyici";
+      case "OWNER": return "Owner";
+      case "MEMBER": return "Member";
+      case "VIEWER": return "Viewer";
       default: return r;
     }
   };
 
   return (
-    <Modal isOpen onClose={onClose} title="Board Uyeleri">
+    <Modal isOpen onClose={onClose} title="Board Members">
       <div className="space-y-4">
         <div className="space-y-2">
           {members.map((m) => (
@@ -85,7 +85,7 @@ export default function MemberList({ boardId, members, isOwner, onClose, onUpdat
                 </span>
                 {isOwner && m.role !== "OWNER" && (
                   <button onClick={() => removeMember(m.id)} className="text-xs text-red-500 hover:underline">
-                    Cikar
+                    Remove
                   </button>
                 )}
               </div>
@@ -96,14 +96,14 @@ export default function MemberList({ boardId, members, isOwner, onClose, onUpdat
         {isOwner && (
           <>
             <hr className="border-gray-200 dark:border-gray-700" />
-            <h3 className="font-semibold text-gray-700 dark:text-gray-300 text-sm">Uye Davet Et</h3>
+            <h3 className="font-semibold text-gray-700 dark:text-gray-300 text-sm">Invite Member</h3>
             {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
             <form onSubmit={inviteMember} className="flex gap-2">
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email adresi..."
+                placeholder="Email address..."
                 className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
               <select
@@ -111,11 +111,11 @@ export default function MemberList({ boardId, members, isOwner, onClose, onUpdat
                 onChange={(e) => setRole(e.target.value as "MEMBER" | "VIEWER")}
                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
-                <option value="MEMBER">Uye</option>
-                <option value="VIEWER">Izleyici</option>
+                <option value="MEMBER">Member</option>
+                <option value="VIEWER">Viewer</option>
               </select>
               <Button type="submit" size="sm" disabled={loading}>
-                {loading ? "..." : "Davet Et"}
+                {loading ? "..." : "Invite"}
               </Button>
             </form>
           </>

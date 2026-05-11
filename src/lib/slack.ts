@@ -12,7 +12,7 @@ interface SlackMessage {
 }
 
 /**
- * Board'un Slack token ve channel bilgisini kullanarak mesaj gönderir.
+ * Sends a message using the board's Slack token and channel.
  */
 async function sendToBoard(boardId: string, message: SlackMessage): Promise<boolean> {
   const board = await prisma.board.findUnique({
@@ -36,16 +36,16 @@ async function sendToBoard(boardId: string, message: SlackMessage): Promise<bool
       }),
     });
     const data = await res.json();
-    if (!data.ok) console.error("Slack mesaj hatası:", data.error);
+    if (!data.ok) console.error("Slack message error:", data.error);
     return data.ok;
   } catch {
-    console.error("Slack mesaj gönderilemedi");
+    console.error("Failed to send Slack message");
     return false;
   }
 }
 
 /**
- * Card ID'den board'u bulup mesaj gönderir.
+ * Resolves the board from a card ID and sends a message.
  */
 async function sendViaCard(cardId: string, message: SlackMessage): Promise<boolean> {
   const card = await prisma.card.findUnique({
@@ -56,36 +56,36 @@ async function sendViaCard(cardId: string, message: SlackMessage): Promise<boole
   return sendToBoard(card.list.boardId, message);
 }
 
-// Kart oluşturulduğunda
+// Card created
 export function notifyCardCreated(boardId: string, userName: string, cardTitle: string, listTitle: string, boardTitle: string) {
   return sendToBoard(boardId, {
-    text: `${userName} yeni bir kart oluşturdu: "${cardTitle}"`,
+    text: `${userName} created a new card: "${cardTitle}"`,
     blocks: [
-      { type: "header", text: { type: "plain_text", text: "🆕 Yeni Kart Oluşturuldu", emoji: true } },
+      { type: "header", text: { type: "plain_text", text: "🆕 New Card Created", emoji: true } },
       {
         type: "section",
         fields: [
-          { type: "mrkdwn", text: `*Kart:*\n${cardTitle}` },
-          { type: "mrkdwn", text: `*Liste:*\n${listTitle}` },
+          { type: "mrkdwn", text: `*Card:*\n${cardTitle}` },
+          { type: "mrkdwn", text: `*List:*\n${listTitle}` },
           { type: "mrkdwn", text: `*Board:*\n${boardTitle}` },
-          { type: "mrkdwn", text: `*Oluşturan:*\n${userName}` },
+          { type: "mrkdwn", text: `*Created by:*\n${userName}` },
         ],
       },
     ],
   });
 }
 
-// Yorum eklendiğinde
+// Comment added
 export function notifyCommentAdded(cardId: string, userName: string, comment: string, cardTitle: string, boardTitle: string) {
   const short = comment.length > 200 ? comment.substring(0, 200) + "..." : comment;
   return sendViaCard(cardId, {
-    text: `${userName} yorum ekledi: "${short}"`,
+    text: `${userName} added a comment: "${short}"`,
     blocks: [
-      { type: "header", text: { type: "plain_text", text: "💬 Yeni Yorum", emoji: true } },
+      { type: "header", text: { type: "plain_text", text: "💬 New Comment", emoji: true } },
       {
         type: "section",
         fields: [
-          { type: "mrkdwn", text: `*Kart:*\n${cardTitle}` },
+          { type: "mrkdwn", text: `*Card:*\n${cardTitle}` },
           { type: "mrkdwn", text: `*Board:*\n${boardTitle}` },
         ],
       },
@@ -94,74 +94,74 @@ export function notifyCommentAdded(cardId: string, userName: string, comment: st
   });
 }
 
-// Kart taşındığında
+// Card moved
 export function notifyCardMoved(cardId: string, userName: string, cardTitle: string, fromList: string, toList: string) {
   return sendViaCard(cardId, {
-    text: `${userName} "${cardTitle}" kartını taşıdı: ${fromList} → ${toList}`,
+    text: `${userName} moved card "${cardTitle}": ${fromList} → ${toList}`,
     blocks: [
-      { type: "header", text: { type: "plain_text", text: "📦 Kart Taşındı", emoji: true } },
+      { type: "header", text: { type: "plain_text", text: "📦 Card Moved", emoji: true } },
       {
         type: "section",
         fields: [
-          { type: "mrkdwn", text: `*Kart:*\n${cardTitle}` },
-          { type: "mrkdwn", text: `*Taşıyan:*\n${userName}` },
-          { type: "mrkdwn", text: `*Eski Liste:*\n${fromList}` },
-          { type: "mrkdwn", text: `*Yeni Liste:*\n${toList}` },
+          { type: "mrkdwn", text: `*Card:*\n${cardTitle}` },
+          { type: "mrkdwn", text: `*Moved by:*\n${userName}` },
+          { type: "mrkdwn", text: `*From List:*\n${fromList}` },
+          { type: "mrkdwn", text: `*To List:*\n${toList}` },
         ],
       },
     ],
   });
 }
 
-// Üye eklendiğinde
+// Member added
 export function notifyMemberAdded(boardId: string, addedBy: string, memberName: string, boardTitle: string, role: string) {
   return sendToBoard(boardId, {
-    text: `${addedBy}, ${memberName} kullanıcısını "${boardTitle}" board'una ekledi`,
+    text: `${addedBy} added ${memberName} to the "${boardTitle}" board`,
     blocks: [
-      { type: "header", text: { type: "plain_text", text: "👤 Yeni Üye Eklendi", emoji: true } },
+      { type: "header", text: { type: "plain_text", text: "👤 New Member Added", emoji: true } },
       {
         type: "section",
         fields: [
-          { type: "mrkdwn", text: `*Üye:*\n${memberName}` },
-          { type: "mrkdwn", text: `*Rol:*\n${role}` },
+          { type: "mrkdwn", text: `*Member:*\n${memberName}` },
+          { type: "mrkdwn", text: `*Role:*\n${role}` },
           { type: "mrkdwn", text: `*Board:*\n${boardTitle}` },
-          { type: "mrkdwn", text: `*Ekleyen:*\n${addedBy}` },
+          { type: "mrkdwn", text: `*Added by:*\n${addedBy}` },
         ],
       },
     ],
   });
 }
 
-// Kart silindiğinde
+// Card deleted
 export function notifyCardDeleted(boardId: string, userName: string, cardTitle: string, boardTitle: string) {
   return sendToBoard(boardId, {
-    text: `${userName} "${cardTitle}" kartını sildi`,
+    text: `${userName} deleted card "${cardTitle}"`,
     blocks: [
-      { type: "header", text: { type: "plain_text", text: "🗑️ Kart Silindi", emoji: true } },
+      { type: "header", text: { type: "plain_text", text: "🗑️ Card Deleted", emoji: true } },
       {
         type: "section",
         fields: [
-          { type: "mrkdwn", text: `*Kart:*\n${cardTitle}` },
+          { type: "mrkdwn", text: `*Card:*\n${cardTitle}` },
           { type: "mrkdwn", text: `*Board:*\n${boardTitle}` },
-          { type: "mrkdwn", text: `*Silen:*\n${userName}` },
+          { type: "mrkdwn", text: `*Deleted by:*\n${userName}` },
         ],
       },
     ],
   });
 }
 
-// Son tarih belirlendiğinde
+// Due date set
 export function notifyDueDateSet(cardId: string, userName: string, cardTitle: string, dueDate: string) {
   return sendViaCard(cardId, {
-    text: `${userName} "${cardTitle}" kartına son tarih ekledi: ${dueDate}`,
+    text: `${userName} set a due date for card "${cardTitle}": ${dueDate}`,
     blocks: [
-      { type: "header", text: { type: "plain_text", text: "📅 Son Tarih Belirlendi", emoji: true } },
+      { type: "header", text: { type: "plain_text", text: "📅 Due Date Set", emoji: true } },
       {
         type: "section",
         fields: [
-          { type: "mrkdwn", text: `*Kart:*\n${cardTitle}` },
-          { type: "mrkdwn", text: `*Son Tarih:*\n${dueDate}` },
-          { type: "mrkdwn", text: `*Belirleyen:*\n${userName}` },
+          { type: "mrkdwn", text: `*Card:*\n${cardTitle}` },
+          { type: "mrkdwn", text: `*Due Date:*\n${dueDate}` },
+          { type: "mrkdwn", text: `*Set by:*\n${userName}` },
         ],
       },
     ],

@@ -8,16 +8,16 @@ export async function POST(req: NextRequest) {
     const { name, email, password } = await req.json();
 
     if (!name || !email || !password) {
-      return errorResponse("Tüm alanlar gereklidir", 400);
+      return errorResponse("All fields are required", 400);
     }
 
     if (password.length < 8) {
-      return errorResponse("Şifre en az 8 karakter olmalıdır", 400);
+      return errorResponse("Password must be at least 8 characters", 400);
     }
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      return errorResponse("Bu email zaten kullanılıyor", 400);
+      return errorResponse("This email is already in use", 400);
     }
 
     const hashedPassword = await hashPassword(password);
@@ -42,6 +42,6 @@ export async function POST(req: NextRequest) {
 
     return response;
   } catch {
-    return errorResponse("Sunucu hatası", 500);
+    return errorResponse("Server error", 500);
   }
 }

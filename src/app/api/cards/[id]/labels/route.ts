@@ -8,7 +8,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const userId = req.headers.get("x-user-id")!;
 
     const hasAccess = await verifyCardAccess(cardId, userId);
-    if (!hasAccess) return errorResponse("Yetkiniz yok", 403);
+    if (!hasAccess) return errorResponse("You don't have permission", 403);
 
     const { labelId } = await req.json();
 
@@ -27,6 +27,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     await prisma.cardLabel.create({ data: { cardId, labelId } });
     return jsonResponse({ added: true }, 201);
   } catch {
-    return errorResponse("Sunucu hatası", 500);
+    return errorResponse("Server error", 500);
   }
 }

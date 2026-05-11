@@ -150,7 +150,7 @@ export default function CardDetail({ cardId, boardLabels, onClose, onUpdate }: C
   };
 
   const deleteCard = async () => {
-    if (!confirm("Bu karti silmek istediginize emin misiniz?")) return;
+    if (!confirm("Are you sure you want to delete this card?")) return;
     await fetch(`/api/cards/${cardId}`, { method: "DELETE" });
     onUpdate();
     onClose();
@@ -158,8 +158,8 @@ export default function CardDetail({ cardId, boardLabels, onClose, onUpdate }: C
 
   if (loading || !card) {
     return (
-      <Modal isOpen onClose={onClose} title="Kart Detayi" size="lg">
-        <p className="text-gray-500 dark:text-gray-400">Yukleniyor...</p>
+      <Modal isOpen onClose={onClose} title="Card Details" size="lg">
+        <p className="text-gray-500 dark:text-gray-400">Loading...</p>
       </Modal>
     );
   }
@@ -172,7 +172,7 @@ export default function CardDetail({ cardId, boardLabels, onClose, onUpdate }: C
         )}
 
         <div>
-          <p className="text-xs text-gray-400 mb-1">{card.list.title} listesinde</p>
+          <p className="text-xs text-gray-400 mb-1">in list {card.list.title}</p>
           <h2 className="text-xl font-bold text-gray-800 dark:text-white">{card.title}</h2>
         </div>
 
@@ -188,7 +188,7 @@ export default function CardDetail({ cardId, boardLabels, onClose, onUpdate }: C
           <div className="col-span-2 space-y-6">
             {/* Description */}
             <div>
-              <h3 className="font-semibold text-gray-700 dark:text-gray-300 text-sm mb-2">Aciklama</h3>
+              <h3 className="font-semibold text-gray-700 dark:text-gray-300 text-sm mb-2">Description</h3>
               {editingDesc ? (
                 <div>
                   <textarea
@@ -199,8 +199,8 @@ export default function CardDetail({ cardId, boardLabels, onClose, onUpdate }: C
                     autoFocus
                   />
                   <div className="flex gap-2 mt-2">
-                    <Button size="sm" onClick={saveDescription}>Kaydet</Button>
-                    <Button size="sm" variant="ghost" onClick={() => { setEditingDesc(false); setDescription(card.description || ""); }}>Iptal</Button>
+                    <Button size="sm" onClick={saveDescription}>Save</Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setEditingDesc(false); setDescription(card.description || ""); }}>Cancel</Button>
                   </div>
                 </div>
               ) : (
@@ -208,14 +208,14 @@ export default function CardDetail({ cardId, boardLabels, onClose, onUpdate }: C
                   onClick={() => setEditingDesc(true)}
                   className="min-h-[60px] bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-sm text-gray-600 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition whitespace-pre-wrap"
                 >
-                  {card.description || "Aciklama eklemek icin tiklayin..."}
+                  {card.description || "Click to add a description..."}
                 </div>
               )}
             </div>
 
             {/* Due Date */}
             <div>
-              <h3 className="font-semibold text-gray-700 dark:text-gray-300 text-sm mb-2">Son Tarih</h3>
+              <h3 className="font-semibold text-gray-700 dark:text-gray-300 text-sm mb-2">Due Date</h3>
               <input
                 type="date"
                 value={card.dueDate ? new Date(card.dueDate).toISOString().split("T")[0] : ""}
@@ -230,8 +230,8 @@ export default function CardDetail({ cardId, boardLabels, onClose, onUpdate }: C
             {/* Attachments */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold text-gray-700 dark:text-gray-300 text-sm">Dosyalar</h3>
-                <Button size="sm" variant="secondary" onClick={() => fileInputRef.current?.click()}>Dosya Ekle</Button>
+                <h3 className="font-semibold text-gray-700 dark:text-gray-300 text-sm">Attachments</h3>
+                <Button size="sm" variant="secondary" onClick={() => fileInputRef.current?.click()}>Add File</Button>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -254,7 +254,7 @@ export default function CardDetail({ cardId, boardLabels, onClose, onUpdate }: C
                         <a href={att.url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 dark:text-blue-400 hover:underline truncate block">
                           {att.filename}
                         </a>
-                        <p className="text-xs text-gray-400">{new Date(att.createdAt).toLocaleDateString("tr-TR")}</p>
+                        <p className="text-xs text-gray-400">{new Date(att.createdAt).toLocaleDateString("en-US")}</p>
                       </div>
                       <button
                         onClick={() => deleteAttachment(att.id)}
@@ -268,13 +268,13 @@ export default function CardDetail({ cardId, boardLabels, onClose, onUpdate }: C
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-400">Henuz dosya eklenmemis</p>
+                <p className="text-sm text-gray-400">No attachments yet</p>
               )}
             </div>
 
             {/* Comments */}
             <div>
-              <h3 className="font-semibold text-gray-700 dark:text-gray-300 text-sm mb-3">Yorumlar</h3>
+              <h3 className="font-semibold text-gray-700 dark:text-gray-300 text-sm mb-3">Comments</h3>
 
               {/* Comment input */}
               <div className="flex gap-2 mb-4">
@@ -283,7 +283,7 @@ export default function CardDetail({ cardId, boardLabels, onClose, onUpdate }: C
                   <textarea
                     value={commentText}
                     onChange={(e) => setCommentText(e.target.value)}
-                    placeholder="Yorum yaz..."
+                    placeholder="Write a comment..."
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                     rows={2}
                     onKeyDown={(e) => {
@@ -296,7 +296,7 @@ export default function CardDetail({ cardId, boardLabels, onClose, onUpdate }: C
                   {commentText.trim() && (
                     <div className="flex justify-end mt-1">
                       <Button size="sm" onClick={addComment} disabled={submittingComment}>
-                        {submittingComment ? "..." : "Gonder"}
+                        {submittingComment ? "..." : "Send"}
                       </Button>
                     </div>
                   )}
@@ -313,13 +313,13 @@ export default function CardDetail({ cardId, boardLabels, onClose, onUpdate }: C
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{c.user.name}</span>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-400">{new Date(c.createdAt).toLocaleString("tr-TR")}</span>
+                            <span className="text-xs text-gray-400">{new Date(c.createdAt).toLocaleString("en-US")}</span>
                             {user?.id === c.user.id && (
                               <button
                                 onClick={() => deleteComment(c.id)}
                                 className="text-gray-300 dark:text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition text-xs"
                               >
-                                Sil
+                                Delete
                               </button>
                             )}
                           </div>
@@ -335,7 +335,7 @@ export default function CardDetail({ cardId, boardLabels, onClose, onUpdate }: C
             {/* Activity */}
             {card.activities.length > 0 && (
               <div>
-                <h3 className="font-semibold text-gray-700 dark:text-gray-300 text-sm mb-2">Aktivite</h3>
+                <h3 className="font-semibold text-gray-700 dark:text-gray-300 text-sm mb-2">Activity</h3>
                 <div className="space-y-2">
                   {card.activities.map((act) => (
                     <div key={act.id} className="flex items-start gap-2">
@@ -345,7 +345,7 @@ export default function CardDetail({ cardId, boardLabels, onClose, onUpdate }: C
                           <span className="font-medium text-gray-700 dark:text-gray-300">{act.user.name}</span>{" "}
                           <span className="text-gray-500 dark:text-gray-400">{act.action}</span>
                         </p>
-                        <p className="text-xs text-gray-400">{new Date(act.createdAt).toLocaleString("tr-TR")}</p>
+                        <p className="text-xs text-gray-400">{new Date(act.createdAt).toLocaleString("en-US")}</p>
                       </div>
                     </div>
                   ))}
@@ -356,13 +356,13 @@ export default function CardDetail({ cardId, boardLabels, onClose, onUpdate }: C
 
           {/* Sidebar actions */}
           <div className="space-y-2">
-            <p className="text-xs font-semibold text-gray-400 uppercase">Eylemler</p>
+            <p className="text-xs font-semibold text-gray-400 uppercase">Actions</p>
 
             <button
               onClick={() => setShowLabels(!showLabels)}
               className="w-full text-left px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 transition"
             >
-              Etiketler
+              Labels
             </button>
             {showLabels && (
               <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-2">
@@ -378,7 +378,7 @@ export default function CardDetail({ cardId, boardLabels, onClose, onUpdate }: C
               onClick={() => setShowCover(!showCover)}
               className="w-full text-left px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 transition"
             >
-              Kapak Rengi
+              Cover Color
             </button>
             {showCover && (
               <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-2">
@@ -388,7 +388,7 @@ export default function CardDetail({ cardId, boardLabels, onClose, onUpdate }: C
                 />
                 {card.coverColor && (
                   <button onClick={() => updateCard({ coverColor: null })} className="mt-2 text-xs text-red-500 hover:underline">
-                    Kapagi Kaldir
+                    Remove Cover
                   </button>
                 )}
               </div>
@@ -400,7 +400,7 @@ export default function CardDetail({ cardId, boardLabels, onClose, onUpdate }: C
               onClick={deleteCard}
               className="w-full text-left px-3 py-2 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg text-sm text-red-600 dark:text-red-400 transition"
             >
-              Karti Sil
+              Delete Card
             </button>
           </div>
         </div>
