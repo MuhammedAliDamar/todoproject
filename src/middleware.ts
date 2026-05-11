@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth";
 
 const publicPaths = ["/login", "/register", "/api/auth/login", "/api/auth/register", "/api/slack/callback"];
+const publicExactPaths = new Set(["/"]);
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Allow public paths
-  if (publicPaths.some((p) => pathname.startsWith(p))) {
+  // Allow landing page and public paths
+  if (publicExactPaths.has(pathname) || publicPaths.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
   }
 

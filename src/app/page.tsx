@@ -1,22 +1,28 @@
-"use client";
+import "./landing.css";
+import { Features } from "@/components/landing/Features";
+import { FinalCTA } from "@/components/landing/FinalCTA";
+import { Hero } from "@/components/landing/Hero";
+import { LandingFooter } from "@/components/landing/LandingFooter";
+import { LandingNav } from "@/components/landing/LandingNav";
+import { LogoStrip } from "@/components/landing/LogoStrip";
+import { ProductPreview } from "@/components/landing/ProductPreview";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
-
-export default function Home() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading) {
-      router.replace(user ? "/boards" : "/login");
-    }
-  }, [user, loading, router]);
-
+export default function LandingPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 to-purple-700">
-      <div className="text-white text-xl">Loading...</div>
+    <div className="landing-root">
+      <LandingNav />
+      <main>
+        <Hero />
+        <div className="page" id="product">
+          <div className="preview-wrap">
+            <ProductPreview />
+          </div>
+        </div>
+        <LogoStrip />
+        <Features />
+        <FinalCTA />
+      </main>
+      <LandingFooter />
     </div>
   );
 }
