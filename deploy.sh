@@ -103,9 +103,11 @@ log "npm ci"
 cd "${APP_DIR}"
 npm ci --no-audit --no-fund
 
-log "prisma generate + migrate deploy"
+log "prisma generate + db push"
 npx prisma generate
-npx prisma migrate deploy
+# Bu repo migration kullanmıyor (prisma/migrations yok), şemayı db push ile senkronla.
+# Idempotent: şema zaten uyuyorsa no-op; veri kaybı gerektirirse --accept-data-loss olmadan durur.
+npx prisma db push
 
 # 5. Build
 log "next build"
