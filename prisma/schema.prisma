@@ -38,6 +38,7 @@ model Board {
   slackTeamName   String?
   userId          String
   createdAt       DateTime      @default(now())
+  deletedAt       DateTime?
   user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   members         BoardMember[]
   lists           List[]

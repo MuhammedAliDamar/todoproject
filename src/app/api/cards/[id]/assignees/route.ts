@@ -17,7 +17,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // Kartın panosunu bul ve hedef kullanıcının üye olduğunu doğrula
     const card = await prisma.card.findUnique({
       where: { id: cardId },
-      select: { list: { select: { board: { select: { id: true, userId: true } } } } },
+      select: { title: true, list: { select: { board: { select: { id: true, userId: true } } } } },
     });
     if (!card) return errorResponse("Card not found", 404);
 
@@ -30,11 +30,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     if (!isMember) return errorResponse("User is not a member of this board", 400);
 
-    await prisma.cardAssignee.upsert({
+    const existing = await prisma.cardAssignee.findUnique({
       where: { cardId_userId: { cardId, userId: assigneeId } },
-      create: { cardId, userId: assigneeId },
-      update: {},
     });
+
+    if (!existing) {
+      await prisma.cardAssignee.create({ data: { cardId, userId: assigneeId } });
+
+      // Atanan kişiye bildirim (kendine atamada bildirme)
+      if (assigneeId !== userId) {
+        await prisma.notification.create({
+          data: {
+            message: `You were assigned to card "${card.title}"`,
+            type: "CARD_ASSIGNED",
+            userId: assigneeId,
+            boardId: board.id,
+          },
+        });
+      }
+    }
 
     const assignees = await prisma.cardAssignee.findMany({
       where: { cardId },

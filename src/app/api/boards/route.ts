@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
 
     const boards = await prisma.board.findMany({
       where: {
+        deletedAt: null,
         OR: [
           { userId },
           { members: { some: { userId } } },

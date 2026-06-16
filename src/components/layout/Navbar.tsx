@@ -62,6 +62,13 @@ export default function Navbar() {
                 <p className="font-medium text-gray-800 dark:text-gray-200 text-sm">{user?.name}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
               </div>
+              <Link
+                href="/account"
+                onClick={() => setShowMenu(false)}
+                className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                Account Settings
+              </Link>
               <button
                 onClick={logout}
                 className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-50 dark:hover:bg-gray-700"

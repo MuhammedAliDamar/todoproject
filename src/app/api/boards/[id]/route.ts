@@ -10,6 +10,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const board = await prisma.board.findFirst({
       where: {
         id,
+        deletedAt: null,
         OR: [{ userId }, { members: { some: { userId } } }],
       },
       include: {
@@ -67,6 +68,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const board = await prisma.board.findFirst({
       where: {
         id,
+        deletedAt: null,
         OR: [
           { userId },
           { members: { some: { userId, role: "OWNER" } } },
@@ -100,14 +102,15 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const userId = req.headers.get("x-user-id")!;
 
     const board = await prisma.board.findFirst({
-      where: { id, userId },
+      where: { id, userId, deletedAt: null },
     });
 
     if (!board) {
       return errorResponse("Board not found or you don't have permission", 404);
     }
 
-    await prisma.board.delete({ where: { id } });
+    // Soft delete — kayıt silinmez, deletedAt damgalanır
+    await prisma.board.update({ where: { id }, data: { deletedAt: new Date() } });
 
     return jsonResponse({ message: "Board deleted" });
   } catch {
