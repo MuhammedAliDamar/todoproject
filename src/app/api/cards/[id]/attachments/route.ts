@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { jsonResponse, errorResponse, verifyCardAccess } from "@/lib/utils";
+import { jsonResponse, errorResponse, verifyCardAccess, getCardBoardRole } from "@/lib/utils";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -36,8 +36,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const { id: cardId } = await params;
     const userId = req.headers.get("x-user-id")!;
 
-    const hasAccess = await verifyCardAccess(cardId, userId);
-    if (!hasAccess) return errorResponse("You don't have permission", 403);
+    const role = await getCardBoardRole(cardId, userId);
+    if (!role) return errorResponse("You don't have permission", 403);
+    if (role !== "OWNER") return errorResponse("Only the board owner can delete", 403);
 
     const { attachmentId } = await req.json();
     await prisma.attachment.delete({ where: { id: attachmentId } });

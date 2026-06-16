@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { jsonResponse, errorResponse, verifyCardAccess } from "@/lib/utils";
+import { jsonResponse, errorResponse, verifyCardAccess, getCardBoardRole } from "@/lib/utils";
 import { notifyCardMoved, notifyCardDeleted, notifyDueDateSet } from "@/lib/slack";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -99,8 +99,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const { id } = await params;
     const userId = req.headers.get("x-user-id")!;
 
-    const hasAccess = await verifyCardAccess(id, userId);
-    if (!hasAccess) return errorResponse("Card not found or you don't have permission", 403);
+    const role = await getCardBoardRole(id, userId);
+    if (!role) return errorResponse("Card not found or you don't have permission", 403);
+    if (role !== "OWNER") return errorResponse("Only the board owner can delete", 403);
 
     // Capture card info before deletion for Slack notification
     const cardInfo = await prisma.card.findUnique({

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { jsonResponse, errorResponse, verifyCardAccess } from "@/lib/utils";
+import { jsonResponse, errorResponse, verifyCardAccess, getCardBoardRole } from "@/lib/utils";
 import { notifyCommentAdded } from "@/lib/slack";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -63,13 +63,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await params;
+    const { id: cardId } = await params;
     const userId = req.headers.get("x-user-id")!;
     const { commentId } = await req.json();
 
+    const role = await getCardBoardRole(cardId, userId);
+    if (!role) return errorResponse("You don't have permission", 403);
+    if (role !== "OWNER") return errorResponse("Only the board owner can delete", 403);
+
     const comment = await prisma.comment.findUnique({ where: { id: commentId } });
-    if (!comment || comment.userId !== userId) {
-      return errorResponse("Comment not found or you don't have permission", 403);
+    if (!comment) {
+      return errorResponse("Comment not found", 404);
     }
 
     await prisma.comment.delete({ where: { id: commentId } });

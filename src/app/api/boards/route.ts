@@ -46,6 +46,15 @@ export async function POST(req: NextRequest) {
         members: {
           create: { userId, role: "OWNER" },
         },
+        lists: {
+          createMany: {
+            data: [
+              { title: "ToDo", position: 0 },
+              { title: "InProgress", position: 1 },
+              { title: "Completed", position: 2 },
+            ],
+          },
+        },
         labels: {
           createMany: {
             data: [

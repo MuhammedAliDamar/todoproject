@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { jsonResponse, errorResponse, verifyListAccess } from "@/lib/utils";
+import { jsonResponse, errorResponse, verifyListAccess, getListBoardRole } from "@/lib/utils";
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -31,8 +31,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const { id } = await params;
     const userId = req.headers.get("x-user-id")!;
 
-    const hasAccess = await verifyListAccess(id, userId);
-    if (!hasAccess) return errorResponse("List not found or you don't have permission", 403);
+    const role = await getListBoardRole(id, userId);
+    if (!role) return errorResponse("List not found or you don't have permission", 403);
+    if (role !== "OWNER") return errorResponse("Only the board owner can delete", 403);
 
     await prisma.list.delete({ where: { id } });
     return jsonResponse({ message: "List deleted" });
