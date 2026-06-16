@@ -28,7 +28,6 @@ export function LandingNav() {
             <a className="nav-link" href="#product">Product</a>
             <a className="nav-link" href="#features">Features</a>
             <a className="nav-link" href="#">Customers</a>
-            <a className="nav-link" href="#">Pricing</a>
             <a className="nav-link" href="#">Changelog</a>
           </div>
           <div className="nav-right">

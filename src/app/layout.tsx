@@ -25,7 +25,7 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "marktasks — Stop juggling tools. Run the work.",
+  title: "marktasks — Stop juggling tools. Always FREE.",
   description:
     "marktasks is the calm, fast project tracker that replaces Asana, Jira and a dozen browser tabs — one workspace for boards, sprints, docs and roadmaps.",
 };

@@ -21,7 +21,7 @@ export function Hero() {
         <h1 className="headline">
           Stop juggling tools.
           <br />
-          <em>Run the work.</em>
+          <em>Always FREE.</em>
         </h1>
 
         <p className="lede">

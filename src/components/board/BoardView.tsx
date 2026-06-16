@@ -20,6 +20,7 @@ import MemberList from "./MemberList";
 import SlackSettings from "./SlackSettings";
 import SearchBar from "@/components/shared/SearchBar";
 import Button from "@/components/ui/Button";
+import { useAuth } from "@/context/AuthContext";
 
 interface CardData {
   id: string;
@@ -60,6 +61,7 @@ interface BoardViewProps {
 }
 
 export default function BoardView({ boardId }: BoardViewProps) {
+  const { user } = useAuth();
   const [board, setBoard] = useState<BoardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeCard, setActiveCard] = useState<CardData | null>(null);
@@ -347,9 +349,11 @@ export default function BoardView({ boardId }: BoardViewProps) {
         <MemberList
           boardId={board.id}
           members={board.members}
-          isOwner={board.members.some(
-            (m) => m.role === "OWNER" && m.user.id === board.userId
-          )}
+          isOwner={
+            !!user &&
+            (board.userId === user.id ||
+              board.members.some((m) => m.role === "OWNER" && m.user.id === user.id))
+          }
           onClose={() => setShowMembers(false)}
           onUpdate={fetchBoard}
         />
