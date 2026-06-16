@@ -394,13 +394,13 @@ export default function CardDetail({ cardId, boardLabels, boardMembers, isOwner,
           <div className="space-y-2">
             <p className="text-xs font-semibold text-gray-400 uppercase">Actions</p>
 
-            {isOwner && <button
+            <button
               onClick={() => setShowAssignees(!showAssignees)}
               className="w-full text-left px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 transition"
             >
               Members
-            </button>}
-            {isOwner && showAssignees && (
+            </button>
+            {showAssignees && (
               <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-2 space-y-1">
                 {boardMembers.length === 0 && (
                   <p className="text-xs text-gray-400 px-1">No board members</p>

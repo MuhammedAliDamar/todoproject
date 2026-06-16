@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { jsonResponse, errorResponse, getCardBoardRole } from "@/lib/utils";
+import { jsonResponse, errorResponse, verifyCardAccess } from "@/lib/utils";
 
 // Karta atanan kullanıcılar; sadece o panonun üyeleri atanabilir.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -8,9 +8,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const { id: cardId } = await params;
     const userId = req.headers.get("x-user-id")!;
 
-    const role = await getCardBoardRole(cardId, userId);
-    if (!role) return errorResponse("You don't have permission", 403);
-    if (role !== "OWNER") return errorResponse("Only the board owner can assign members", 403);
+    const hasAccess = await verifyCardAccess(cardId, userId);
+    if (!hasAccess) return errorResponse("You don't have permission", 403);
 
     const { assigneeId } = await req.json();
     if (!assigneeId) return errorResponse("assigneeId is required", 400);
@@ -53,9 +52,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const { id: cardId } = await params;
     const userId = req.headers.get("x-user-id")!;
 
-    const role = await getCardBoardRole(cardId, userId);
-    if (!role) return errorResponse("You don't have permission", 403);
-    if (role !== "OWNER") return errorResponse("Only the board owner can assign members", 403);
+    const hasAccess = await verifyCardAccess(cardId, userId);
+    if (!hasAccess) return errorResponse("You don't have permission", 403);
 
     const { assigneeId } = await req.json();
     if (!assigneeId) return errorResponse("assigneeId is required", 400);
