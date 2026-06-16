@@ -27,6 +27,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
                 labels: { include: { label: true } },
                 checklists: { include: { items: true } },
                 attachments: true,
+                assignees: { include: { user: { select: { id: true, name: true, email: true, avatar: true } } } },
                 _count: { select: { attachments: true, checklists: true } },
               },
             },

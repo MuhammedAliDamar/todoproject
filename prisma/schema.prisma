@@ -25,6 +25,7 @@ model User {
   activities   Activity[]
   notifications Notification[]
   comments     Comment[]
+  assignedCards CardAssignee[]
 }
 
 model Board {
@@ -80,6 +81,16 @@ model Card {
   attachments Attachment[]
   activities  Activity[]
   comments    Comment[]
+  assignees   CardAssignee[]
+}
+
+model CardAssignee {
+  cardId String
+  userId String
+  card   Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([cardId, userId])
 }
 
 model Label {

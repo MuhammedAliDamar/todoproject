@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { formatDate } from "@/lib/date";
 
 interface Notification {
   id: string;
@@ -83,7 +84,7 @@ export default function NotificationDropdown() {
                 >
                   <p className="text-gray-700 dark:text-gray-300">{n.message}</p>
                   <p className="text-xs text-gray-400 mt-1">
-                    {new Date(n.createdAt).toLocaleDateString("en-US")}
+                    {formatDate(n.createdAt)}
                   </p>
                 </div>
               ))

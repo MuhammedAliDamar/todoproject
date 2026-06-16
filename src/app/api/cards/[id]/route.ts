@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonResponse, errorResponse, verifyCardAccess, getCardBoardRole } from "@/lib/utils";
 import { notifyCardMoved, notifyCardDeleted, notifyDueDateSet } from "@/lib/slack";
+import { formatDate } from "@/lib/date";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -17,6 +18,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         labels: { include: { label: true } },
         checklists: { include: { items: true } },
         attachments: { orderBy: { createdAt: "desc" } },
+        assignees: { include: { user: { select: { id: true, name: true, email: true, avatar: true } } } },
         activities: {
           include: { user: { select: { id: true, name: true, avatar: true } } },
           orderBy: { createdAt: "desc" },
@@ -48,6 +50,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const data = await req.json();
 
+    // Taşımadan ÖNCE kartın mevcut listesini yakala (from→to için)
+    const before = await prisma.card.findUnique({ where: { id }, select: { listId: true } });
+
     const card = await prisma.card.update({
       where: { id },
       data: {
@@ -68,24 +73,30 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
 
-    // Log activity + Slack for moves
-    if (data.listId !== undefined) {
-      const oldList = await prisma.list.findUnique({ where: { id: data.listId }, select: { title: true } });
+    // Log activity + Slack for moves (gerçekten liste değiştiyse)
+    if (data.listId !== undefined && before && before.listId !== data.listId) {
+      const [fromList, toList] = await Promise.all([
+        prisma.list.findUnique({ where: { id: before.listId }, select: { title: true } }),
+        prisma.list.findUnique({ where: { id: data.listId }, select: { title: true } }),
+      ]);
+      const fromTitle = fromList?.title ?? "unknown";
+      const toTitle = toList?.title ?? "unknown";
+
       await prisma.activity.create({
         data: {
-          action: `moved card "${card.title}"`,
+          action: `moved card "${card.title}" from "${fromTitle}" to "${toTitle}"`,
           cardId: card.id,
           userId,
         },
       });
-      if (user && oldList) {
-        notifyCardMoved(id, user.name, card.title, "previous list", oldList.title);
+      if (user) {
+        notifyCardMoved(id, user.name, card.title, fromTitle, toTitle);
       }
     }
 
     // Slack for due date
     if (data.dueDate && user) {
-      notifyDueDateSet(id, user.name, card.title, new Date(data.dueDate).toLocaleDateString("en-US"));
+      notifyDueDateSet(id, user.name, card.title, formatDate(data.dueDate));
     }
 
     return jsonResponse(card);

@@ -32,6 +32,7 @@ interface CardData {
   listId: string;
   labels: { label: { id: string; name: string; color: string } }[];
   checklists: { id: string; items: { isCompleted: boolean }[] }[];
+  assignees: { user: { id: string; name: string; avatar?: string | null } }[];
   _count: { attachments: number; checklists: number };
 }
 
@@ -226,6 +227,12 @@ export default function BoardView({ boardId }: BoardViewProps) {
     }),
   }));
 
+  // Mevcut kullanıcı bu panonun sahibi mi? (kurucu veya OWNER üye)
+  const isOwner =
+    !!user &&
+    (board.userId === user.id ||
+      board.members.some((m) => m.role === "OWNER" && m.user.id === user.id));
+
   return (
     <div
       className="h-[calc(100vh-3.5rem)] flex flex-col"
@@ -326,6 +333,8 @@ export default function BoardView({ boardId }: BoardViewProps) {
         <CardDetail
           cardId={selectedCardId}
           boardLabels={board.labels}
+          boardMembers={board.members.map((m) => m.user)}
+          isOwner={isOwner}
           onClose={() => setSelectedCardId(null)}
           onUpdate={fetchBoard}
         />
@@ -349,11 +358,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
         <MemberList
           boardId={board.id}
           members={board.members}
-          isOwner={
-            !!user &&
-            (board.userId === user.id ||
-              board.members.some((m) => m.role === "OWNER" && m.user.id === user.id))
-          }
+          isOwner={isOwner}
           onClose={() => setShowMembers(false)}
           onUpdate={fetchBoard}
         />

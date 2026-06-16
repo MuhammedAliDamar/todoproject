@@ -3,9 +3,15 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import Badge from "@/components/ui/Badge";
+import Avatar from "@/components/ui/Avatar";
+import { formatDate } from "@/lib/date";
 
 interface CardLabel {
   label: { id: string; name: string; color: string };
+}
+
+interface CardAssignee {
+  user: { id: string; name: string; avatar?: string | null };
 }
 
 interface CardProps {
@@ -13,12 +19,13 @@ interface CardProps {
   title: string;
   coverColor?: string | null;
   labels: CardLabel[];
+  assignees: CardAssignee[];
   dueDate?: string | null;
   _count: { attachments: number; checklists: number };
   onClick: () => void;
 }
 
-export default function Card({ id, title, coverColor, labels, dueDate, _count, onClick }: CardProps) {
+export default function Card({ id, title, coverColor, labels, assignees, dueDate, _count, onClick }: CardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
     data: { type: "card" },
@@ -61,7 +68,7 @@ export default function Card({ id, title, coverColor, labels, dueDate, _count, o
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              {new Date(dueDate).toLocaleDateString("en-US")}
+              {formatDate(dueDate)}
             </span>
           )}
           {_count.checklists > 0 && (
@@ -78,6 +85,21 @@ export default function Card({ id, title, coverColor, labels, dueDate, _count, o
               </svg>
               {_count.attachments}
             </span>
+          )}
+
+          {assignees.length > 0 && (
+            <div className="flex items-center -space-x-1.5 ml-auto">
+              {assignees.slice(0, 3).map((a) => (
+                <div key={a.user.id} className="ring-2 ring-white dark:ring-gray-700 rounded-full">
+                  <Avatar name={a.user.name} src={a.user.avatar} size="sm" />
+                </div>
+              ))}
+              {assignees.length > 3 && (
+                <span className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-600 ring-2 ring-white dark:ring-gray-700 flex items-center justify-center text-[10px] font-medium text-gray-600 dark:text-gray-300">
+                  +{assignees.length - 3}
+                </span>
+              )}
+            </div>
           )}
         </div>
       </div>

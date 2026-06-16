@@ -13,6 +13,7 @@ interface CardData {
   dueDate?: string | null;
   position: number;
   labels: { label: { id: string; name: string; color: string } }[];
+  assignees: { user: { id: string; name: string; avatar?: string | null } }[];
   _count: { attachments: number; checklists: number };
 }
 
@@ -101,6 +102,7 @@ export default function List({ id, title, cards, onRefresh, onCardClick, onDelet
               title={card.title}
               coverColor={card.coverColor}
               labels={card.labels}
+              assignees={card.assignees}
               dueDate={card.dueDate}
               _count={card._count}
               onClick={() => onCardClick(card.id)}
