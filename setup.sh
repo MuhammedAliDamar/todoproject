@@ -11,7 +11,14 @@
 #   - prisma db push yalnızca eklemeli şema (veri kaybı gerekirse durur).
 #   - .env yeniden yazılırken mevcut Slack/SMTP değerleri korunur.
 #
-# İlk kurulum:
+# Panel nerede olursa olsun çalışır:
+#   - Panel şu an /var/www/marktasks.com'daysa, script onu otomatik
+#     /var/www/dashboard.marktasks.com'a TAŞIR ve marktasks.com'u WordPress'e bırakır.
+#
+# Mevcut kurulumdan (panel /var/www/marktasks.com'da):
+#   cd /var/www/marktasks.com && git pull && sudo bash setup.sh
+#
+# Temiz kurulum:
 #   git clone https://github.com/MuhammedAliDamar/todoproject.git /var/www/dashboard.marktasks.com
 #   cd /var/www/dashboard.marktasks.com && sudo bash setup.sh
 #
@@ -22,10 +29,12 @@ set -euo pipefail
 
 # ===================== KONFIG =====================
 APP_NAME="marktasks"
-# Panel dizini = bu script'in bulunduğu dizin (nereye clone'larsan oradan çalışır)
-APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_PORT=4444
 PANEL_DOMAIN="dashboard.marktasks.com"
+# Panel hedef dizini (Next) — WordPress'ten ayrı olmalı
+PANEL_DIR="/var/www/dashboard.marktasks.com"
+# Script'in çalıştığı dizin (panel buradan taşınabilir)
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Panel Postgres
 PG_DB="marktasks"
@@ -57,7 +66,27 @@ warn() { echo -e "${Y}[!]${N} $*"; }
 err()  { echo -e "${R}[x]${N} $*" >&2; exit 1; }
 
 [[ $EUID -eq 0 ]] || err "Root olarak çalıştır: sudo bash setup.sh"
-[[ -d "$APP_DIR/.git" ]] || err "$APP_DIR git repo değil. Önce panel'i buraya clone'la."
+[[ -d "$SELF_DIR/.git" ]] || err "$SELF_DIR git repo değil. Önce panel'i clone'la."
+
+# --- Panel'i doğru dizine yerleştir (marktasks.com'u WordPress'e bırak) ---
+# Panel WP_DIR'in (marktasks.com) içindeyse otomatik dashboard dizinine taşı.
+if [[ "$SELF_DIR" == "$WP_DIR" ]]; then
+  if [[ -e "$PANEL_DIR" && -n "$(ls -A "$PANEL_DIR" 2>/dev/null)" ]]; then
+    err "$PANEL_DIR zaten dolu. Çakışmayı elle çöz, sonra tekrar çalıştır."
+  fi
+  log "Panel $WP_DIR -> $PANEL_DIR taşınıyor (marktasks.com WordPress'e bırakılıyor)"
+  mkdir -p "$(dirname "$PANEL_DIR")"
+  mv "$WP_DIR" "$PANEL_DIR"
+  APP_DIR="$PANEL_DIR"
+elif [[ "$SELF_DIR" == "$PANEL_DIR" ]]; then
+  APP_DIR="$PANEL_DIR"
+else
+  # Panel başka bir dizinde; WP_DIR ayrı kalmalı
+  APP_DIR="$SELF_DIR"
+  [[ "$APP_DIR" == "$WP_DIR" ]] && err "Panel ${WP_DIR} ile çakışıyor."
+fi
+cd "$APP_DIR"
+log "Panel dizini: $APP_DIR"
 
 # Secret üret/oku — /root altında kalıcı (deploy'lar arası değişmez)
 gen_secret() { # $1=dosya $2=uzunluk(hex byte)

@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 4444",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start -p 4444",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
