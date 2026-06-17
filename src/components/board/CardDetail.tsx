@@ -222,8 +222,8 @@ export default function CardDetail({ cardId, boardLabels, boardMembers, isOwner,
             />
           ) : (
             <h2
-              onDoubleClick={() => setEditingTitle(true)}
-              title="Double-click to edit"
+              onClick={() => setEditingTitle(true)}
+              title="Click to edit"
               className="text-xl font-bold text-gray-800 dark:text-white cursor-text rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 -ml-2 px-2 py-1"
             >
               {card.title}

@@ -35,7 +35,7 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 to-purple-700 dark:from-gray-900 dark:to-gray-800">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-white">marktasks</h1>
+          {/* eslint-disable-next-line @next/next/no-img-element */}<img src="/logo.png" alt="MarkTasks" className="h-10 w-auto mx-auto" />
           <p className="text-gray-500 dark:text-gray-400 mt-2">Reset your password</p>
         </div>
 

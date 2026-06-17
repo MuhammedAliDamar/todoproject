@@ -26,8 +26,9 @@ export default function Navbar() {
   return (
     <header className="bg-white/90 dark:bg-gray-800/90 backdrop-blur border-b border-gray-200 dark:border-gray-700 h-14 flex items-center px-4 justify-between sticky top-0 z-40">
       <div className="flex items-center gap-3">
-        <Link href="/boards" className="text-xl font-bold text-blue-600 dark:text-blue-400 hover:opacity-80 transition">
-          marktasks
+        <Link href="/boards" className="flex items-center hover:opacity-80 transition">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="MarkTasks" className="h-7 w-auto" />
         </Link>
       </div>
 

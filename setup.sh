@@ -227,6 +227,20 @@ fi
 rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl reload nginx && log "nginx reload OK" || warn "nginx -t HATALI — yukarıyı oku"
 
+# ===================== 7) Gerçek SSL (opsiyonel, Let's Encrypt) =====================
+# Self-signed taban zaten var. CERTBOT=1 ile çalıştırılırsa gerçek cert almayı dener.
+# DİKKAT: Domain Cloudflare proxy (turuncu bulut) arkasındaysa HTTP-01 BAŞARISIZ olur;
+# önce o kaydı geçici "DNS only" (gri bulut) yap, certbot'tan sonra tekrar proxy'e al.
+if [[ "${CERTBOT:-0}" == "1" ]]; then
+  log "Gerçek SSL deneniyor (certbot)"
+  certbot --nginx -d "${PANEL_DOMAIN}" --non-interactive --agree-tos -m "${ADMIN_EMAIL}" --redirect \
+    || warn "Certbot (panel) başarısız — Cloudflare kaydını DNS-only yapıp tekrar dene."
+  if [[ -f "${WP_DIR}/wp-load.php" ]]; then
+    certbot --nginx -d "${WP_DOMAIN}" -d "www.${WP_DOMAIN}" --non-interactive --agree-tos -m "${ADMIN_EMAIL}" --redirect \
+      || warn "Certbot (WordPress) başarısız — Cloudflare kaydını DNS-only yapıp tekrar dene."
+  fi
+fi
+
 # ===================== ÖZET =====================
 echo
 log "BİTTİ"
