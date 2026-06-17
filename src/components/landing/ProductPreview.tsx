@@ -280,16 +280,7 @@ function BoardView() {
   return (
     <div className="board-view">
       <ViewToolbar count={TASKS.length} />
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-          gap: 14,
-          padding: "16px 18px 22px",
-          overflowX: "auto",
-          minHeight: 440,
-        }}
-      >
+      <div className="preview-board-grid">
         {grouped.map((lane) => (
           <div
             key={lane.id}
@@ -532,15 +523,17 @@ function ListView() {
     <div>
       <ViewToolbar count={rows.length} />
       <div
+        className="preview-list"
         style={{
           margin: "16px 18px 22px",
           background: "var(--surface)",
           border: "1px solid var(--line)",
           borderRadius: 12,
-          overflow: "hidden",
+          overflowX: "auto",
         }}
       >
         <div
+          className="preview-list-row"
           style={{
             display: "grid",
             gridTemplateColumns: cols,
@@ -564,6 +557,7 @@ function ListView() {
         {rows.map((t, i) => (
           <div
             key={t.id}
+            className="preview-list-row"
             style={{
               display: "grid",
               gridTemplateColumns: cols,
@@ -668,16 +662,18 @@ function TimelineView() {
     <div>
       <ViewToolbar count={TASKS.length} />
       <div
+        className="preview-timeline"
         style={{
           margin: "16px 18px 22px",
           background: "var(--surface)",
           border: "1px solid var(--line)",
           borderRadius: 12,
-          overflow: "hidden",
+          overflowX: "auto",
           position: "relative",
         }}
       >
         <div
+          className="preview-tl-row"
           style={{
             display: "grid",
             gridTemplateColumns: "180px 1fr",
@@ -727,6 +723,7 @@ function TimelineView() {
           {TASKS.map((t, i) => (
             <div
               key={t.id}
+              className="preview-tl-row"
               style={{
                 display: "grid",
                 gridTemplateColumns: "180px 1fr",

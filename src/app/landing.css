@@ -401,6 +401,39 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* Board (kanban) önizleme — responsive */
+.landing-root .preview-board-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  padding: 16px 18px 22px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  min-height: 440px;
+}
+/* Tablet: 4 yerine sığabildiği kadar, min genişlikle yatay kaydır */
+@media (max-width: 900px) {
+  .landing-root .preview-board-grid {
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    grid-auto-columns: minmax(220px, 1fr);
+  }
+}
+/* Mobil: kolonlar daha dar ama okunur, yatay kaydır */
+@media (max-width: 540px) {
+  .landing-root .preview-board-grid {
+    grid-auto-columns: minmax(78vw, 1fr);
+    gap: 10px;
+    padding: 12px 14px 18px;
+  }
+}
+
+/* List + Timeline önizleme — dar ekranda ezilmesin, yatay kaydır */
+@media (max-width: 760px) {
+  .landing-root .preview-list-row { min-width: 640px; }
+  .landing-root .preview-tl-row { min-width: 760px; }
+}
+
 /* —— LOGO STRIP ———————————————————— */
 .landing-root .logo-strip {
   padding: 24px 0 64px;
