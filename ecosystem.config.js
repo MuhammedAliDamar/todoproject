@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: "marktasks",
-      cwd: "/var/www/marktasks.com",
+      cwd: "/var/www/dashboard.marktasks.com",
       script: "npm",
       args: "start",
       instances: 1,

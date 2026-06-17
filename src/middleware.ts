@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth";
 
-const publicPaths = ["/login", "/register", "/api/auth/login", "/api/auth/register", "/api/slack/callback"];
+const publicPaths = ["/login", "/register", "/forgot-password", "/reset-password", "/api/auth/login", "/api/auth/register", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/slack/callback"];
 const publicExactPaths = new Set(["/"]);
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Allow landing page and public paths
+  // Allow root (redirects to /login) and public paths
   if (publicExactPaths.has(pathname) || publicPaths.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
   }

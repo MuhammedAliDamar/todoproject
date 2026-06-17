@@ -60,6 +60,8 @@ export default function CardDetail({ cardId, boardLabels, boardMembers, isOwner,
   const [loading, setLoading] = useState(true);
   const [description, setDescription] = useState("");
   const [editingDesc, setEditingDesc] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleText, setTitleText] = useState("");
   const [showLabels, setShowLabels] = useState(false);
   const [showCover, setShowCover] = useState(false);
   const [showAssignees, setShowAssignees] = useState(false);
@@ -75,6 +77,7 @@ export default function CardDetail({ cardId, boardLabels, boardMembers, isOwner,
         const data = await res.json();
         setCard(data);
         setDescription(data.description || "");
+        setTitleText(data.title || "");
       }
     } catch { /* ignore */ } finally {
       setLoading(false);
@@ -98,6 +101,16 @@ export default function CardDetail({ cardId, boardLabels, boardMembers, isOwner,
   const saveDescription = () => {
     updateCard({ description });
     setEditingDesc(false);
+  };
+
+  const saveTitle = () => {
+    const trimmed = titleText.trim();
+    if (trimmed && trimmed !== card?.title) {
+      updateCard({ title: trimmed });
+    } else {
+      setTitleText(card?.title || "");
+    }
+    setEditingTitle(false);
   };
 
   const toggleAssignee = async (assigneeId: string, isAssigned: boolean) => {
@@ -195,7 +208,27 @@ export default function CardDetail({ cardId, boardLabels, boardMembers, isOwner,
 
         <div>
           <p className="text-xs text-gray-400 mb-1">in list {card.list.title}</p>
-          <h2 className="text-xl font-bold text-gray-800 dark:text-white">{card.title}</h2>
+          {editingTitle ? (
+            <input
+              value={titleText}
+              onChange={(e) => setTitleText(e.target.value)}
+              onBlur={saveTitle}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); saveTitle(); }
+                if (e.key === "Escape") { setTitleText(card.title); setEditingTitle(false); }
+              }}
+              autoFocus
+              className="w-full text-xl font-bold px-2 py-1 -ml-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
+            />
+          ) : (
+            <h2
+              onDoubleClick={() => setEditingTitle(true)}
+              title="Double-click to edit"
+              className="text-xl font-bold text-gray-800 dark:text-white cursor-text rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 -ml-2 px-2 py-1"
+            >
+              {card.title}
+            </h2>
+          )}
         </div>
 
         {card.labels.length > 0 && (
