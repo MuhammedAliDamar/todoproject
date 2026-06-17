@@ -115,9 +115,19 @@ log "Panel build (npm ci + prisma + build)"
 ( cd "$APP_DIR" && npm ci --no-audit --no-fund && npx prisma generate && npx prisma db push && npm run build ) \
   || warn "Panel build sorunlu — eski build ile devam (logları kontrol et)"
 sed -i "s|cwd: \".*\"|cwd: \"${APP_DIR}\"|" "${APP_DIR}/ecosystem.config.js" 2>/dev/null || true
-if pm2 describe "${APP_NAME}" >/dev/null 2>&1; then pm2 restart "${APP_NAME}" --update-env; else ( cd "$APP_DIR" && pm2 start ecosystem.config.js ); fi
+# Taze başlat (eski/çökmüş process'i temizle)
+pm2 delete "${APP_NAME}" >/dev/null 2>&1 || true
+( cd "$APP_DIR" && pm2 start ecosystem.config.js )
 pm2 save >/dev/null 2>&1 || true
 pm2 startup systemd -u root --hp /root >/dev/null 2>&1 || true
+# 4444 cevap veriyor mu? (502 sebebi buradan anlaşılır)
+sleep 3
+if curl -sf -o /dev/null -w "%{http_code}" http://127.0.0.1:${APP_PORT} | grep -qE "200|307"; then
+  log "Panel 4444'te çalışıyor"
+else
+  warn "Panel 4444'te cevap vermiyor — pm2 logs ${APP_NAME} ile bak (build hatası olabilir)"
+  pm2 logs "${APP_NAME}" --lines 15 --nostream 2>/dev/null || true
+fi
 
 # ===================== 5) WordPress (WP-CLI) =====================
 log "WordPress (MariaDB + WP-CLI)"
@@ -158,12 +168,25 @@ if [[ -f "${WP_DIR}/wp-config.php" ]]; then
   chown -R www-data:www-data "$WP_DIR"
 fi
 
-# ===================== 6) NGINX (her zaman çalışır) =====================
-log "nginx vhost'ları"
+# ===================== 6) NGINX + SSL (self-signed, Cloudflare 'Full' uyumlu) =====================
+log "nginx vhost'ları (80 + 443 self-signed)"
+# Origin için self-signed cert üret (Cloudflare edge zaten public TLS sağlar; CF->origin için bu yeter)
+SSL_DIR="/etc/nginx/ssl"; mkdir -p "$SSL_DIR"
+selfcert() { # $1=domain
+  [[ -f "${SSL_DIR}/$1.crt" ]] || openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+    -keyout "${SSL_DIR}/$1.key" -out "${SSL_DIR}/$1.crt" -subj "/CN=$1" >/dev/null 2>&1
+}
+selfcert "${PANEL_DOMAIN}"
+selfcert "${WP_DOMAIN}"
+
+# Panel vhost (80 + 443 -> Next)
 cat > "/etc/nginx/sites-available/${PANEL_DOMAIN}" <<EOF
 server {
   listen 80;
+  listen 443 ssl;
   server_name ${PANEL_DOMAIN};
+  ssl_certificate     ${SSL_DIR}/${PANEL_DOMAIN}.crt;
+  ssl_certificate_key ${SSL_DIR}/${PANEL_DOMAIN}.key;
   client_max_body_size 25m;
   location / {
     proxy_pass http://127.0.0.1:${APP_PORT};
@@ -180,11 +203,15 @@ server {
 EOF
 ln -sf "/etc/nginx/sites-available/${PANEL_DOMAIN}" "/etc/nginx/sites-enabled/${PANEL_DOMAIN}"
 
+# WordPress vhost (80 + 443 -> php-fpm) — WP kuruluysa
 if [[ -n "$PHP_FPM_SOCK" && -f "${WP_DIR}/wp-load.php" ]]; then
   cat > "/etc/nginx/sites-available/${WP_DOMAIN}" <<EOF
 server {
   listen 80;
+  listen 443 ssl;
   server_name ${WP_DOMAIN} www.${WP_DOMAIN};
+  ssl_certificate     ${SSL_DIR}/${WP_DOMAIN}.crt;
+  ssl_certificate_key ${SSL_DIR}/${WP_DOMAIN}.key;
   root ${WP_DIR};
   index index.php index.html;
   client_max_body_size 64m;
@@ -200,21 +227,11 @@ fi
 rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl reload nginx && log "nginx reload OK" || warn "nginx -t HATALI — yukarıyı oku"
 
-# ===================== 7) SSL =====================
-log "SSL (certbot)"
-[[ -d "/etc/letsencrypt/live/${PANEL_DOMAIN}" ]] || \
-  certbot --nginx -d "${PANEL_DOMAIN}" --non-interactive --agree-tos -m "${ADMIN_EMAIL}" --redirect \
-  || warn "Certbot (panel) başarısız — Cloudflare ise kaydı geçici DNS-only yap."
-if [[ -f "${WP_DIR}/wp-load.php" ]]; then
-  [[ -d "/etc/letsencrypt/live/${WP_DOMAIN}" ]] || \
-    certbot --nginx -d "${WP_DOMAIN}" -d "www.${WP_DOMAIN}" --non-interactive --agree-tos -m "${ADMIN_EMAIL}" --redirect \
-    || warn "Certbot (WordPress) başarısız."
-fi
-
 # ===================== ÖZET =====================
 echo
 log "BİTTİ"
 echo "  Panel:     https://${PANEL_DOMAIN}   (pm2: ${APP_NAME}:${APP_PORT})"
 echo "  WordPress: https://${WP_DOMAIN}      (admin: admin / $(cat /root/.${APP_NAME}_wp_admin 2>/dev/null))"
 echo "  WP $([[ -f ${WP_DIR}/wp-load.php ]] && echo 'KURULU' || echo 'KURULMADI — yukarıdaki [!] satırlarına bak')"
-warn "Cloudflare proxy açıksa cert alınamayabilir; o domaini geçici DNS-only yapıp setup.sh'i tekrar çalıştır."
+warn "Origin self-signed cert kullanıyor. Cloudflare SSL/TLS modu 'Full' olmalı (Full STRICT değil)."
+warn "Tarayıcı 526 verirse: Cloudflare > SSL/TLS > Overview > 'Full' seç."
