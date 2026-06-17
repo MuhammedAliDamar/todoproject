@@ -25,8 +25,9 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "marktasks — Dashboard",
-  description: "marktasks project dashboard — boards, lists and cards.",
+  title: "MarkTasks – Task Management Boards for Teams",
+  description:
+    "Plan projects, organize tasks, and track progress with simple boards, lists, and cards. MarkTasks helps teams stay focused and get work done faster.",
 };
 
 export default function RootLayout({

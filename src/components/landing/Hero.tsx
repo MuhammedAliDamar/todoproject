@@ -14,20 +14,19 @@ export function Hero() {
             ></span>
             New
           </span>
-          AI agents that close your tickets while you sleep
+          New workspace for boards, tasks and team planning
           <IconArrowRight size={12} style={{ marginLeft: 2, opacity: 0.6 }} />
         </div>
 
         <h1 className="headline">
-          Stop juggling tools.
+          Plan your work.
           <br />
-          <em>Always FREE.</em>
+          <em>Stay on track.</em>
         </h1>
 
         <p className="lede">
-          marktasks is the calm, fast project tracker that replaces Asana,
-          Jira and a dozen browser tabs — one workspace for boards, sprints,
-          docs and roadmaps.
+          MarkTasks helps teams organize projects with simple boards, clear task
+          lists and visual progress tracking — all in one focused workspace.
         </p>
 
         <div className="hero-ctas">
@@ -35,7 +34,7 @@ export function Hero() {
             Start free — no card <IconArrowRight size={14} />
           </Link>
           <a className="btn btn-outline btn-lg" href="#product">
-            <IconPlay size={12} /> Watch 90-sec tour
+            <IconPlay size={12} /> See how it works
           </a>
         </div>
 
@@ -51,14 +50,14 @@ export function Hero() {
             <span className="check">
               <IconCheck size={9} sw={3} />
             </span>
-            Import from Asana in 3 clicks
+            Boards, lists and cards
           </span>
           <span className="hero-meta-dot"></span>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
             <span className="check">
               <IconCheck size={9} sw={3} />
             </span>
-            SOC 2 Type II
+            No credit card required
           </span>
         </div>
       </div>

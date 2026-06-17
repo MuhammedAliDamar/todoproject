@@ -22,7 +22,7 @@ export function LandingNav() {
         <nav className="nav">
           <Link className="brand" href="/">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="MarkTasks" style={{ height: 32, width: "auto", display: "block" }} />
+            <img src="/logo.png" alt="MarkTasks" style={{ height: 44, width: "auto", display: "block" }} />
           </Link>
           <div className="nav-links">
             <a className="nav-link" href="#product">Product</a>

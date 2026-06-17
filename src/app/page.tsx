@@ -6,6 +6,7 @@ import { LandingFooter } from "@/components/landing/LandingFooter";
 import { LandingNav } from "@/components/landing/LandingNav";
 import { LogoStrip } from "@/components/landing/LogoStrip";
 import { ProductPreview } from "@/components/landing/ProductPreview";
+import { SeoSection } from "@/components/landing/SeoSection";
 
 export default function LandingPage() {
   return (
@@ -20,6 +21,7 @@ export default function LandingPage() {
         </div>
         <LogoStrip />
         <Features />
+        <SeoSection />
         <FinalCTA />
       </main>
       <LandingFooter />
