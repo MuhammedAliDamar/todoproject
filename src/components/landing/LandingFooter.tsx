@@ -1,6 +1,21 @@
+import Script from "next/script";
+
 export function LandingFooter() {
   return (
     <footer className="footer">
+      {/* Google tag (gtag.js) */}
+      <Script
+        src="https://www.googletagmanager.com/gtag/js?id=G-WZRNZR2GZM"
+        strategy="afterInteractive"
+      />
+      <Script id="gtag-init" strategy="afterInteractive">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-WZRNZR2GZM');
+        `}
+      </Script>
       <div className="page">
         <div className="footer-brand" style={{ maxWidth: 520 }}>
           <a className="brand" href="/">
