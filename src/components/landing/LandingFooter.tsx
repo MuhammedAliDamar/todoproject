@@ -5,7 +5,7 @@ export function LandingFooter() {
     <footer className="footer">
       {/* Google tag (gtag.js) */}
       <Script
-        src="https://www.googletagmanager.com/gtag/js?id=G-WZRNZR2GZM"
+        src="https://www.googletagmanager.com/gtag/js?id=G-MJK5EN0XEN"
         strategy="afterInteractive"
       />
       <Script id="gtag-init" strategy="afterInteractive">
@@ -13,7 +13,7 @@ export function LandingFooter() {
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
-          gtag('config', 'G-WZRNZR2GZM');
+          gtag('config', 'G-MJK5EN0XEN');
         `}
       </Script>
       <div className="page">
