@@ -57,7 +57,7 @@ export default function AddCard({ listId, onAdd }: AddCardProps) {
         value={title}
         onChange={(e) => { setTitle(e.target.value); autoGrow(e.target); }}
         placeholder="Card title..."
-        className="w-full min-h-[3.5rem] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-x overflow-hidden bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+        className="w-full min-h-[3.5rem] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-y overflow-hidden bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
         rows={2}
         autoFocus
         onKeyDown={(e) => {

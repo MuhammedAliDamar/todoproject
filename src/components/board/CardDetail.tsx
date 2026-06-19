@@ -70,6 +70,13 @@ export default function CardDetail({ cardId, boardLabels, boardMembers, isOwner,
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
 
+  // satir eklendikçe yüksekligi içerige göre ayarla (auto-grow)
+  const autoGrow = (el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  };
+
   const fetchCard = useCallback(async () => {
     try {
       const res = await fetch(`/api/cards/${cardId}`);
@@ -247,9 +254,10 @@ export default function CardDetail({ cardId, boardLabels, boardMembers, isOwner,
               {editingDesc ? (
                 <div>
                   <textarea
+                    ref={autoGrow}
                     value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    onChange={(e) => { setDescription(e.target.value); autoGrow(e.target); }}
+                    className="w-full min-h-[6rem] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-y overflow-hidden bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     rows={4}
                     autoFocus
                   />
@@ -387,9 +395,9 @@ export default function CardDetail({ cardId, boardLabels, boardMembers, isOwner,
                 <div className="flex-1">
                   <textarea
                     value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
+                    onChange={(e) => { setCommentText(e.target.value); autoGrow(e.target); }}
                     placeholder="Write a comment..."
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+                    className="w-full min-h-[3.5rem] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-y overflow-hidden bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                     rows={2}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
