@@ -73,7 +73,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
   const [filterLabel, setFilterLabel] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [boardTitle, setBoardTitle] = useState("");
-  const [viewMode, setViewMode] = useState<"list" | "board">("list");
+  const [viewMode, setViewMode] = useState<"list" | "board">("board");
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
