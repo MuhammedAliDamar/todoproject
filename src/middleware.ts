@@ -38,8 +38,8 @@ export async function middleware(req: NextRequest) {
     return response;
   }
 
-  // Redirect authenticated users away from auth pages
-  if (pathname === "/login" || pathname === "/register") {
+  // Redirect authenticated users away from auth/landing pages
+  if (pathname === "/" || pathname === "/login" || pathname === "/register") {
     return NextResponse.redirect(new URL("/boards", req.url));
   }
 
