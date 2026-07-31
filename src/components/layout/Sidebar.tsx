@@ -63,7 +63,11 @@ export default function Sidebar() {
         </Link>
         <Link
           href="/my-tasks"
-          className="p-2 rounded-lg transition mb-1 text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)]"
+          className={`p-2 rounded-lg transition mb-1 ${
+            pathname === "/my-tasks"
+              ? "bg-[var(--asana-sidebar-active)] text-[var(--asana-sidebar-text-active)]"
+              : "text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)]"
+          }`}
           title="My Tasks"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -72,7 +76,11 @@ export default function Sidebar() {
         </Link>
         <Link
           href="/inbox"
-          className="p-2 rounded-lg transition mb-1 text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)]"
+          className={`p-2 rounded-lg transition mb-1 ${
+            pathname === "/inbox"
+              ? "bg-[var(--asana-sidebar-active)] text-[var(--asana-sidebar-text-active)]"
+              : "text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)]"
+          }`}
           title="Inbox"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -117,9 +125,9 @@ export default function Sidebar() {
           </Link>
 
           <Link
-            href="/boards"
+            href="/my-tasks"
             className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              pathname.startsWith("/board/")
+              pathname === "/my-tasks"
                 ? "bg-[var(--asana-sidebar-active)] text-[var(--asana-sidebar-text-active)]"
                 : "text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)] hover:text-[var(--asana-sidebar-text-active)]"
             }`}
@@ -136,8 +144,12 @@ export default function Sidebar() {
           </Link>
 
           <Link
-            href="/boards"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)] hover:text-[var(--asana-sidebar-text-active)]"
+            href="/inbox"
+            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              pathname === "/inbox"
+                ? "bg-[var(--asana-sidebar-active)] text-[var(--asana-sidebar-text-active)]"
+                : "text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)] hover:text-[var(--asana-sidebar-text-active)]"
+            }`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
