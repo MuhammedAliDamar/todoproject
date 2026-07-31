@@ -35,7 +35,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (!role) return errorResponse("List not found or you don't have permission", 403);
     if (role !== "OWNER") return errorResponse("Only the board owner can delete", 403);
 
-    await prisma.list.delete({ where: { id } });
+    await prisma.list.update({ where: { id }, data: { deletedAt: new Date() } });
     return jsonResponse({ message: "List deleted" });
   } catch {
     return errorResponse("Server error", 500);

@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
 
     // Get max position
     const lastList = await prisma.list.findFirst({
-      where: { boardId },
+      where: { boardId, deletedAt: null },
       orderBy: { position: "desc" },
     });
 

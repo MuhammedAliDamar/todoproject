@@ -9,18 +9,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
-        <div className="text-gray-500 dark:text-gray-400">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-[var(--asana-bg)]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-2 border-[var(--asana-accent)] border-t-transparent rounded-full animate-spin" />
+          <span className="text-[var(--asana-text-secondary)] text-sm">Loading...</span>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-[var(--asana-bg)]">
       <Navbar />
       <div className="flex">
         <Sidebar />
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 overflow-hidden">{children}</main>
       </div>
     </div>
   );

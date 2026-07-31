@@ -35,22 +35,25 @@ export default function AddList({ boardId, onAdd }: AddListProps) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="flex-shrink-0 w-72 bg-white/30 hover:bg-white/50 text-white rounded-xl p-3 text-sm font-medium text-left transition"
+        className="flex-shrink-0 w-72 bg-[var(--asana-bg)] dark:bg-[#1a1a1a] hover:bg-gray-200 dark:hover:bg-[#2e2f31] border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-3 text-sm font-medium text-[var(--asana-text-secondary)] text-left transition flex items-center gap-2"
       >
-        + Add List
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        </svg>
+        Add Section
       </button>
     );
   }
 
   return (
-    <div className="flex-shrink-0 w-72 bg-white dark:bg-gray-800 rounded-xl p-3 shadow-sm">
+    <div className="flex-shrink-0 w-72 bg-[var(--asana-bg-white)] dark:bg-[#2e2f31] rounded-xl p-3 border border-[var(--asana-border)]">
       <form onSubmit={handleSubmit}>
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="List title..."
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none mb-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          placeholder="Section name..."
+          className="w-full px-3 py-2 border border-[var(--asana-border)] rounded-lg text-sm focus:ring-1 focus:ring-[var(--asana-accent)] outline-none mb-2 bg-transparent text-[var(--asana-text)] dark:text-white"
           autoFocus
         />
         <div className="flex gap-2">

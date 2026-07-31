@@ -46,10 +46,10 @@ export default function Card({ id, title, coverColor, labels, assignees, dueDate
       {...attributes}
       {...listeners}
       onClick={onClick}
-      className="bg-white dark:bg-gray-700 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 cursor-pointer group"
+      className="bg-[var(--asana-bg-white)] dark:bg-[#2e2f31] rounded-lg border border-[var(--asana-border)] hover:border-gray-300 dark:hover:border-gray-500 cursor-pointer group shadow-sm hover:shadow transition"
     >
       {coverColor && (
-        <div className="h-8 rounded-t-lg" style={{ backgroundColor: coverColor }} />
+        <div className="h-2 rounded-t-lg" style={{ backgroundColor: coverColor }} />
       )}
       <div className="p-3">
         {labels.length > 0 && (
@@ -60,11 +60,11 @@ export default function Card({ id, title, coverColor, labels, assignees, dueDate
           </div>
         )}
 
-        <p className="text-sm text-gray-800 dark:text-gray-100 font-medium">{title}</p>
+        <p className="text-sm text-[var(--asana-text)] dark:text-white font-medium">{title}</p>
 
         <div className="flex items-center gap-3 mt-2">
           {dueDate && (
-            <span className={`text-xs flex items-center gap-1 ${isOverdue ? "text-red-500" : "text-gray-400 dark:text-gray-500"}`}>
+            <span className={`text-xs flex items-center gap-1 ${isOverdue ? "text-[var(--asana-accent)]" : "text-[var(--asana-text-secondary)]"}`}>
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -72,14 +72,12 @@ export default function Card({ id, title, coverColor, labels, assignees, dueDate
             </span>
           )}
           {_count.checklists > 0 && (
-            <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            </span>
+            <svg className="w-3.5 h-3.5 text-[var(--asana-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
           )}
           {_count.attachments > 0 && (
-            <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+            <span className="text-xs text-[var(--asana-text-secondary)] flex items-center gap-0.5">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
               </svg>
@@ -90,12 +88,12 @@ export default function Card({ id, title, coverColor, labels, assignees, dueDate
           {assignees.length > 0 && (
             <div className="flex items-center -space-x-1.5 ml-auto">
               {assignees.slice(0, 3).map((a) => (
-                <div key={a.user.id} className="ring-2 ring-white dark:ring-gray-700 rounded-full">
+                <div key={a.user.id} className="ring-2 ring-[var(--asana-bg-white)] dark:ring-[#2e2f31] rounded-full">
                   <Avatar name={a.user.name} src={a.user.avatar} size="sm" />
                 </div>
               ))}
               {assignees.length > 3 && (
-                <span className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-600 ring-2 ring-white dark:ring-gray-700 flex items-center justify-center text-[10px] font-medium text-gray-600 dark:text-gray-300">
+                <span className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-600 ring-2 ring-[var(--asana-bg-white)] dark:ring-[#2e2f31] flex items-center justify-center text-[10px] font-medium text-[var(--asana-text-secondary)]">
                   +{assignees.length - 3}
                 </span>
               )}

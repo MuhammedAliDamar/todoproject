@@ -14,7 +14,6 @@ export default function AddCard({ listId, onAdd }: AddCardProps) {
   const [loading, setLoading] = useState(false);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
-  // satır eklendikçe yüksekligi içerige göre ayarla (auto-grow)
   const autoGrow = (el: HTMLTextAreaElement) => {
     el.style.height = "auto";
     el.style.height = `${el.scrollHeight}px`;
@@ -43,9 +42,12 @@ export default function AddCard({ listId, onAdd }: AddCardProps) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="w-full text-left text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg p-2 transition"
+        className="w-full text-left text-sm text-[var(--asana-text-secondary)] hover:text-[var(--asana-text)] dark:hover:text-white hover:bg-gray-200 dark:hover:bg-[#3a3b3d] rounded-lg p-2 transition flex items-center gap-1.5"
       >
-        + Add Card
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        </svg>
+        Add task
       </button>
     );
   }
@@ -56,8 +58,8 @@ export default function AddCard({ listId, onAdd }: AddCardProps) {
         ref={taRef}
         value={title}
         onChange={(e) => { setTitle(e.target.value); autoGrow(e.target); }}
-        placeholder="Card title..."
-        className="w-full min-h-[3.5rem] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-y overflow-hidden bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+        placeholder="Task name..."
+        className="w-full min-h-[3rem] px-3 py-2 border border-[var(--asana-border)] rounded-lg text-sm focus:ring-1 focus:ring-[var(--asana-accent)] outline-none resize-none overflow-hidden bg-transparent text-[var(--asana-text)] dark:text-white"
         rows={2}
         autoFocus
         onKeyDown={(e) => {

@@ -14,19 +14,22 @@ enum Role {
 }
 
 model User {
-  id           String         @id @default(cuid())
-  name         String
-  email        String         @unique
-  password     String
-  avatar       String?
-  createdAt    DateTime       @default(now())
-  boards       Board[]
-  boardMembers BoardMember[]
-  activities   Activity[]
-  notifications Notification[]
-  comments     Comment[]
-  assignedCards CardAssignee[]
-  resetTokens  PasswordResetToken[]
+  id              String         @id @default(cuid())
+  name            String
+  email           String         @unique
+  password        String
+  avatar          String?
+  slackToken      String?
+  slackTeamId     String?
+  slackTeamName   String?
+  createdAt       DateTime       @default(now())
+  boards          Board[]
+  boardMembers    BoardMember[]
+  activities      Activity[]
+  notifications   Notification[]
+  comments        Comment[]
+  assignedCards   CardAssignee[]
+  resetTokens     PasswordResetToken[]
 }
 
 model PasswordResetToken {
@@ -58,36 +61,39 @@ model Board {
 }
 
 model BoardMember {
-  id      String @id @default(cuid())
-  boardId String
-  userId  String
-  role    Role   @default(MEMBER)
-  board   Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String    @id @default(cuid())
+  boardId   String
+  userId    String
+  role      Role      @default(MEMBER)
+  deletedAt DateTime?
+  board     Board     @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([boardId, userId])
 }
 
 model List {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   title     String
   position  Int
   boardId   String
-  createdAt DateTime @default(now())
-  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+  board     Board     @relation(fields: [boardId], references: [id], onDelete: Cascade)
   cards     Card[]
 }
 
 model Card {
-  id          String      @id @default(cuid())
+  id          String       @id @default(cuid())
   title       String
   description String?
   position    Int
   listId      String
   dueDate     DateTime?
   coverColor  String?
-  createdAt   DateTime    @default(now())
-  list        List        @relation(fields: [listId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  deletedAt   DateTime?
+  list        List         @relation(fields: [listId], references: [id], onDelete: Cascade)
   labels      CardLabel[]
   checklists  Checklist[]
   attachments Attachment[]
@@ -97,10 +103,11 @@ model Card {
 }
 
 model CardAssignee {
-  cardId String
-  userId String
-  card   Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cardId    String
+  userId    String
+  deletedAt DateTime?
+  card      Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([cardId, userId])
 }
@@ -115,20 +122,22 @@ model Label {
 }
 
 model CardLabel {
-  cardId  String
-  labelId String
-  card    Card  @relation(fields: [cardId], references: [id], onDelete: Cascade)
-  label   Label @relation(fields: [labelId], references: [id], onDelete: Cascade)
+  cardId    String
+  labelId   String
+  deletedAt DateTime?
+  card      Card  @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  label     Label @relation(fields: [labelId], references: [id], onDelete: Cascade)
 
   @@id([cardId, labelId])
 }
 
 model Checklist {
-  id     String          @id @default(cuid())
-  title  String
-  cardId String
-  card   Card            @relation(fields: [cardId], references: [id], onDelete: Cascade)
-  items  ChecklistItem[]
+  id        String          @id @default(cuid())
+  title     String
+  cardId    String
+  deletedAt DateTime?
+  card      Card            @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  items     ChecklistItem[]
 }
 
 model ChecklistItem {
@@ -136,16 +145,18 @@ model ChecklistItem {
   content     String
   isCompleted Boolean   @default(false)
   checklistId String
+  deletedAt   DateTime?
   checklist   Checklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
 }
 
 model Attachment {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   filename  String
   url       String
   cardId    String
-  createdAt DateTime @default(now())
-  card      Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+  card      Card      @relation(fields: [cardId], references: [id], onDelete: Cascade)
 }
 
 model Notification {
@@ -161,13 +172,14 @@ model Notification {
 }
 
 model Comment {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   content   String
   cardId    String
   userId    String
-  createdAt DateTime @default(now())
-  card      Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+  card      Card      @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Activity {

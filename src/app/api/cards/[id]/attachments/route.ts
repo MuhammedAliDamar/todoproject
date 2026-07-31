@@ -41,7 +41,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (role !== "OWNER") return errorResponse("Only the board owner can delete", 403);
 
     const { attachmentId } = await req.json();
-    await prisma.attachment.delete({ where: { id: attachmentId } });
+    await prisma.attachment.update({ where: { id: attachmentId }, data: { deletedAt: new Date() } });
     return jsonResponse({ message: "File deleted" });
   } catch {
     return errorResponse("Server error", 500);

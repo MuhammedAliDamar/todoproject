@@ -56,6 +56,135 @@ async function sendViaCard(cardId: string, message: SlackMessage): Promise<boole
   return sendToBoard(card.list.boardId, message);
 }
 
+/**
+ * Gets a Slack token — tries board first, then falls back to any user with a connected Slack.
+ */
+async function getSlackToken(boardId?: string): Promise<string | null> {
+  if (boardId) {
+    const board = await prisma.board.findUnique({
+      where: { id: boardId },
+      select: { slackToken: true, userId: true },
+    });
+    if (board?.slackToken) return board.slackToken;
+
+    // Fall back to board owner's account token
+    const owner = await prisma.user.findUnique({
+      where: { id: board?.userId },
+      select: { slackToken: true },
+    });
+    if (owner?.slackToken) return owner.slackToken;
+  }
+
+  // Fall back to any user with a Slack token
+  const anyUser = await prisma.user.findFirst({
+    where: { slackToken: { not: null } },
+    select: { slackToken: true },
+  });
+  return anyUser?.slackToken || null;
+}
+
+/**
+ * Sends a DM to a user by looking up their Slack ID via email.
+ * Uses account-level Slack token (not board-specific).
+ */
+export async function sendDirectMessage(boardId: string, userEmail: string, message: SlackMessage): Promise<boolean> {
+  const token = await getSlackToken(boardId);
+  if (!token) return false;
+
+  try {
+    // Find Slack user by email
+    const lookupRes = await fetch(`https://slack.com/api/users.lookupByEmail?email=${encodeURIComponent(userEmail)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const lookupData = await lookupRes.json();
+    if (!lookupData.ok || !lookupData.user?.id) return false;
+
+    // Send DM directly using user ID as channel
+    const msgRes = await fetch("https://slack.com/api/chat.postMessage", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        channel: lookupData.user.id,
+        text: message.text,
+        blocks: message.blocks,
+      }),
+    });
+    const msgData = await msgRes.json();
+    if (!msgData.ok) console.error("Slack DM error:", msgData.error);
+    return msgData.ok;
+  } catch {
+    console.error("Failed to send Slack DM");
+    return false;
+  }
+}
+
+// Task assigned — DM notification
+export function notifyTaskAssignedDM(
+  boardId: string,
+  assigneeEmail: string,
+  assignerName: string,
+  cardTitle: string,
+  boardTitle: string,
+  appUrl: string,
+  boardPageId: string
+) {
+  return sendDirectMessage(boardId, assigneeEmail, {
+    text: `${assignerName} assigned you to "${cardTitle}"`,
+    blocks: [
+      { type: "header", text: { type: "plain_text", text: "📋 New Task Assigned", emoji: true } },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*${assignerName}* assigned you to a task:`,
+        },
+      },
+      {
+        type: "section",
+        fields: [
+          { type: "mrkdwn", text: `*Task:*\n${cardTitle}` },
+          { type: "mrkdwn", text: `*Project:*\n${boardTitle}` },
+        ],
+      },
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: `<${appUrl}/board/${boardPageId}|View Task>` },
+      },
+    ],
+  });
+}
+
+// Comment added — DM notification
+export function notifyCommentDM(
+  boardId: string,
+  assigneeEmail: string,
+  commenterName: string,
+  comment: string,
+  cardTitle: string,
+) {
+  const short = comment.length > 200 ? comment.substring(0, 200) + "..." : comment;
+  return sendDirectMessage(boardId, assigneeEmail, {
+    text: `${commenterName} commented on "${cardTitle}"`,
+    blocks: [
+      { type: "header", text: { type: "plain_text", text: "💬 New Comment on Your Task", emoji: true } },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*${commenterName}* commented on *${cardTitle}*:`,
+        },
+      },
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: `>${short}` },
+      },
+    ],
+  });
+}
+
 // Card created
 export function notifyCardCreated(boardId: string, userName: string, cardTitle: string, listTitle: string, boardTitle: string) {
   return sendToBoard(boardId, {

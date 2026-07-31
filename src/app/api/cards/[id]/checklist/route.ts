@@ -56,9 +56,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const { checklistId, itemId } = await req.json();
 
     if (itemId) {
-      await prisma.checklistItem.delete({ where: { id: itemId } });
+      await prisma.checklistItem.update({ where: { id: itemId }, data: { deletedAt: new Date() } });
     } else if (checklistId) {
-      await prisma.checklist.delete({ where: { id: checklistId } });
+      await prisma.checklist.update({ where: { id: checklistId }, data: { deletedAt: new Date() } });
     }
 
     return jsonResponse({ message: "Deleted" });

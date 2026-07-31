@@ -16,20 +16,23 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       include: {
         user: { select: { id: true, name: true, email: true } },
         members: {
+          where: { deletedAt: null },
           include: { user: { select: { id: true, name: true, email: true, avatar: true } } },
         },
         labels: true,
         lists: {
+          where: { deletedAt: null },
           orderBy: { position: "asc" },
           include: {
             cards: {
+              where: { deletedAt: null },
               orderBy: { position: "asc" },
               include: {
-                labels: { include: { label: true } },
-                checklists: { include: { items: true } },
-                attachments: true,
-                assignees: { include: { user: { select: { id: true, name: true, email: true, avatar: true } } } },
-                _count: { select: { attachments: true, checklists: true } },
+                labels: { where: { deletedAt: null }, include: { label: true } },
+                checklists: { where: { deletedAt: null }, include: { items: { where: { deletedAt: null } } } },
+                attachments: { where: { deletedAt: null } },
+                assignees: { where: { deletedAt: null }, include: { user: { select: { id: true, name: true, email: true, avatar: true } } } },
+                _count: { select: { attachments: { where: { deletedAt: null } }, checklists: { where: { deletedAt: null } } } },
               },
             },
           },

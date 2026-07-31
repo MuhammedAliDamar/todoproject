@@ -15,16 +15,17 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const card = await prisma.card.findUnique({
       where: { id },
       include: {
-        labels: { include: { label: true } },
-        checklists: { include: { items: true } },
-        attachments: { orderBy: { createdAt: "desc" } },
-        assignees: { include: { user: { select: { id: true, name: true, email: true, avatar: true } } } },
+        labels: { where: { deletedAt: null }, include: { label: true } },
+        checklists: { where: { deletedAt: null }, include: { items: { where: { deletedAt: null } } } },
+        attachments: { where: { deletedAt: null }, orderBy: { createdAt: "desc" } },
+        assignees: { where: { deletedAt: null }, include: { user: { select: { id: true, name: true, email: true, avatar: true } } } },
         activities: {
           include: { user: { select: { id: true, name: true, avatar: true } } },
           orderBy: { createdAt: "desc" },
           take: 20,
         },
         comments: {
+          where: { deletedAt: null },
           include: { user: { select: { id: true, name: true, avatar: true } } },
           orderBy: { createdAt: "desc" },
         },
@@ -121,7 +122,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     });
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
 
-    await prisma.card.delete({ where: { id } });
+    await prisma.card.update({ where: { id }, data: { deletedAt: new Date() } });
 
     if (cardInfo && user) {
       notifyCardDeleted(cardInfo.list.board.id, user.name, cardInfo.title, cardInfo.list.board.title);

@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
     const userId = req.headers.get("x-user-id")!;
 
     const assigned = await prisma.cardAssignee.findMany({
-      where: { userId, card: { list: { board: { deletedAt: null } } } },
+      where: { userId, deletedAt: null, card: { deletedAt: null, list: { deletedAt: null, board: { deletedAt: null } } } },
       select: {
         card: {
           select: {

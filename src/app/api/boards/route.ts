@@ -17,9 +17,10 @@ export async function GET(req: NextRequest) {
       include: {
         user: { select: { id: true, name: true, email: true } },
         members: {
+          where: { deletedAt: null },
           include: { user: { select: { id: true, name: true, email: true } } },
         },
-        _count: { select: { lists: true } },
+        _count: { select: { lists: { where: { deletedAt: null } } } },
       },
       orderBy: { createdAt: "desc" },
     });

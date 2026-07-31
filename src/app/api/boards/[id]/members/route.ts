@@ -11,7 +11,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     // Check if requester is owner
     const membership = await prisma.boardMember.findFirst({
-      where: { boardId, userId, role: "OWNER" },
+      where: { boardId, userId, role: "OWNER", deletedAt: null },
     });
 
     if (!membership) {
@@ -27,14 +27,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       where: { boardId_userId: { boardId, userId: targetUser.id } },
     });
 
-    if (existing) {
+    if (existing && !existing.deletedAt) {
       return errorResponse("User is already a member", 400);
     }
 
-    const member = await prisma.boardMember.create({
-      data: { boardId, userId: targetUser.id, role: role as "MEMBER" | "VIEWER" },
-      include: { user: { select: { id: true, name: true, email: true, avatar: true } } },
-    });
+    let member;
+    if (existing?.deletedAt) {
+      member = await prisma.boardMember.update({
+        where: { id: existing.id },
+        data: { deletedAt: null, role: role as "MEMBER" | "VIEWER" },
+        include: { user: { select: { id: true, name: true, email: true, avatar: true } } },
+      });
+    } else {
+      member = await prisma.boardMember.create({
+        data: { boardId, userId: targetUser.id, role: role as "MEMBER" | "VIEWER" },
+        include: { user: { select: { id: true, name: true, email: true, avatar: true } } },
+      });
+    }
 
     // Create notification for the invited user
     await prisma.notification.create({
@@ -66,7 +75,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const { memberId } = await req.json();
 
     const membership = await prisma.boardMember.findFirst({
-      where: { boardId, userId, role: "OWNER" },
+      where: { boardId, userId, role: "OWNER", deletedAt: null },
     });
 
     if (!membership) {
@@ -78,7 +87,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       return errorResponse("This member cannot be removed", 400);
     }
 
-    await prisma.boardMember.delete({ where: { id: memberId } });
+    await prisma.boardMember.update({ where: { id: memberId }, data: { deletedAt: new Date() } });
 
     return jsonResponse({ message: "Member removed" });
   } catch {

@@ -18,8 +18,9 @@ export type BoardRole = "OWNER" | "MEMBER" | "VIEWER";
 export async function getBoardRole(boardId: string, userId: string): Promise<BoardRole | null> {
   const board = await prisma.board.findUnique({
     where: { id: boardId },
-    select: { userId: true, members: { where: { userId }, select: { role: true } } },
+    select: { userId: true, deletedAt: true, members: { where: { userId, deletedAt: null }, select: { role: true } } },
   });
+  if (board?.deletedAt) return null;
 
   if (!board) return null;
   if (board.userId === userId) return "OWNER";
@@ -55,10 +56,10 @@ export async function getListBoardRole(listId: string, userId: string): Promise<
 export async function verifyCardAccess(cardId: string, userId: string): Promise<boolean> {
   const card = await prisma.card.findUnique({
     where: { id: cardId },
-    select: { list: { select: { board: { select: { userId: true, members: { select: { userId: true } } } } } } },
+    select: { deletedAt: true, list: { select: { deletedAt: true, board: { select: { userId: true, deletedAt: true, members: { where: { deletedAt: null }, select: { userId: true } } } } } } },
   });
 
-  if (!card) return false;
+  if (!card || card.deletedAt || card.list.deletedAt || card.list.board.deletedAt) return false;
 
   const board = card.list.board;
   if (board.userId === userId) return true;
@@ -71,10 +72,10 @@ export async function verifyCardAccess(cardId: string, userId: string): Promise<
 export async function verifyListAccess(listId: string, userId: string): Promise<boolean> {
   const list = await prisma.list.findUnique({
     where: { id: listId },
-    select: { board: { select: { userId: true, members: { select: { userId: true } } } } },
+    select: { deletedAt: true, board: { select: { userId: true, deletedAt: true, members: { where: { deletedAt: null }, select: { userId: true } } } } },
   });
 
-  if (!list) return false;
+  if (!list || list.deletedAt || list.board.deletedAt) return false;
 
   const board = list.board;
   if (board.userId === userId) return true;

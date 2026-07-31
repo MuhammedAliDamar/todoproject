@@ -15,10 +15,10 @@ import {
 import { arrayMove } from "@dnd-kit/sortable";
 import List from "./List";
 import AddList from "./AddList";
-import CardDetail from "./CardDetail";
+import ListView from "./ListView";
+import TaskDetailPanel from "./TaskDetailPanel";
 import MemberList from "./MemberList";
 import SlackSettings from "./SlackSettings";
-import SearchBar from "@/components/shared/SearchBar";
 import Button from "@/components/ui/Button";
 import { useAuth } from "@/context/AuthContext";
 
@@ -73,6 +73,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
   const [filterLabel, setFilterLabel] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [boardTitle, setBoardTitle] = useState("");
+  const [viewMode, setViewMode] = useState<"list" | "board">("list");
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -113,7 +114,6 @@ export default function BoardView({ boardId }: BoardViewProps) {
     const activeList = findListByCardId(active.id as string);
     let overList = findListByCardId(over.id as string);
 
-    // If over is a list (droppable), not a card
     if (!overList) {
       overList = board.lists.find((l) => l.id === over.id);
     }
@@ -156,7 +156,6 @@ export default function BoardView({ boardId }: BoardViewProps) {
     if (!activeList || !overList) return;
 
     if (activeList.id === overList.id) {
-      // Reorder within same list
       const oldIndex = activeList.cards.findIndex((c) => c.id === active.id);
       const newIndex = activeList.cards.findIndex((c) => c.id === over.id);
 
@@ -174,7 +173,6 @@ export default function BoardView({ boardId }: BoardViewProps) {
       }
     }
 
-    // Save the new position to the server
     const card = overList.cards.find((c) => c.id === active.id);
     if (card) {
       const cardIndex = overList.cards.indexOf(card);
@@ -201,10 +199,22 @@ export default function BoardView({ boardId }: BoardViewProps) {
     setEditingTitle(false);
   };
 
+  const handleAddCard = async (listId: string, title: string) => {
+    await fetch("/api/cards", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, listId }),
+    });
+    fetchBoard();
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-3.5rem)]">
-        <p className="text-gray-500">Loading...</p>
+        <div className="flex flex-col items-center gap-2">
+          <div className="w-8 h-8 border-2 border-[var(--asana-accent)] border-t-transparent rounded-full animate-spin" />
+          <p className="text-[var(--asana-text-secondary)] text-sm">Loading project...</p>
+        </div>
       </div>
     );
   }
@@ -212,12 +222,11 @@ export default function BoardView({ boardId }: BoardViewProps) {
   if (!board) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-3.5rem)]">
-        <p className="text-gray-500">Board not found</p>
+        <p className="text-[var(--asana-text-secondary)]">Project not found</p>
       </div>
     );
   }
 
-  // Filter cards
   const filteredLists = board.lists.map((list) => ({
     ...list,
     cards: list.cards.filter((card) => {
@@ -227,110 +236,165 @@ export default function BoardView({ boardId }: BoardViewProps) {
     }),
   }));
 
-  // Mevcut kullanıcı bu panonun sahibi mi? (kurucu veya OWNER üye)
   const isOwner =
     !!user &&
     (board.userId === user.id ||
       board.members.some((m) => m.role === "OWNER" && m.user.id === user.id));
 
   return (
-    <div
-      className="h-[calc(100vh-3.5rem)] flex flex-col"
-      style={{ backgroundColor: board.background }}
-    >
-      {/* Board header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-black/20">
-        <div className="flex items-center gap-3">
-          {editingTitle ? (
-            <input
-              value={boardTitle}
-              onChange={(e) => setBoardTitle(e.target.value)}
-              onBlur={updateBoardTitle}
-              onKeyDown={(e) => e.key === "Enter" && updateBoardTitle()}
-              className="text-lg font-bold bg-white/20 text-white px-2 py-1 rounded outline-none"
-              autoFocus
-            />
-          ) : (
-            <h2
-              onClick={() => setEditingTitle(true)}
-              className="text-lg font-bold text-white cursor-pointer hover:bg-white/10 px-2 py-1 rounded"
-            >
-              {board.title}
-            </h2>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="w-48">
-            <SearchBar value={search} onChange={setSearch} placeholder="Search cards..." />
-          </div>
-
-          {/* Label filter */}
-          <select
-            value={filterLabel || ""}
-            onChange={(e) => setFilterLabel(e.target.value || null)}
-            className="text-sm bg-white/20 text-white border-none rounded-lg px-3 py-2 outline-none"
-          >
-            <option value="" className="text-gray-800">All Labels</option>
-            {board.labels.map((l) => (
-              <option key={l.id} value={l.id} className="text-gray-800">
-                {l.name}
-              </option>
-            ))}
-          </select>
-
-          <Button size="sm" variant="secondary" onClick={() => setShowSlack(true)}>
-            {board.slackChannelId ? (
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 bg-green-400 rounded-full" />
-                Slack
-              </span>
-            ) : "Slack"}
-          </Button>
-
-          <Button size="sm" variant="secondary" onClick={() => setShowMembers(true)}>
-            Members ({board.members.length})
-          </Button>
-        </div>
-      </div>
-
-      {/* Kanban board */}
-      <div className="flex-1 overflow-x-auto p-4">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCorners}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="flex gap-4 h-full items-start">
-            {filteredLists.map((list) => (
-              <List
-                key={list.id}
-                id={list.id}
-                title={list.title}
-                cards={list.cards}
-                onRefresh={fetchBoard}
-                onCardClick={(cardId) => setSelectedCardId(cardId)}
-                onDelete={fetchBoard}
+    <div className="h-[calc(100vh-3.5rem)] flex flex-col bg-[var(--asana-bg)] dark:bg-[var(--asana-bg)]">
+      {/* Project header */}
+      <div className="bg-[var(--asana-bg-white)] dark:bg-[var(--asana-bg-white)] border-b border-[var(--asana-border)] px-6 py-3">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <span className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: board.background }} />
+            {editingTitle ? (
+              <input
+                value={boardTitle}
+                onChange={(e) => setBoardTitle(e.target.value)}
+                onBlur={updateBoardTitle}
+                onKeyDown={(e) => e.key === "Enter" && updateBoardTitle()}
+                className="text-xl font-semibold bg-transparent border-b-2 border-[var(--asana-accent)] outline-none text-[var(--asana-text)] dark:text-white px-1"
+                autoFocus
               />
-            ))}
-            <AddList boardId={board.id} onAdd={fetchBoard} />
+            ) : (
+              <h1
+                onClick={() => setEditingTitle(true)}
+                className="text-xl font-semibold text-[var(--asana-text)] dark:text-white cursor-pointer hover:bg-[var(--asana-bg)] dark:hover:bg-[#3a3b3d] rounded px-1 transition"
+              >
+                {board.title}
+              </h1>
+            )}
           </div>
 
-          <DragOverlay>
-            {activeCard ? (
-              <div className="bg-white dark:bg-gray-700 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 p-3 w-64 opacity-90 rotate-3">
-                <p className="text-sm text-gray-800 dark:text-gray-100 font-medium">{activeCard.title}</p>
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setShowSlack(true)}>
+              {board.slackChannelId ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 bg-[var(--asana-green)] rounded-full" />
+                  Slack
+                </span>
+              ) : "Slack"}
+            </Button>
+
+            <Button size="sm" variant="ghost" onClick={() => setShowMembers(true)}>
+              Members ({board.members.length})
+            </Button>
+          </div>
+        </div>
+
+        {/* View switcher & filters */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setViewMode("list")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                viewMode === "list"
+                  ? "bg-[var(--asana-bg)] dark:bg-[#1a1a1a] text-[var(--asana-text)] dark:text-white"
+                  : "text-[var(--asana-text-secondary)] hover:text-[var(--asana-text)] dark:hover:text-white hover:bg-[var(--asana-bg)] dark:hover:bg-[#3a3b3d]"
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+              </svg>
+              List
+            </button>
+            <button
+              onClick={() => setViewMode("board")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                viewMode === "board"
+                  ? "bg-[var(--asana-bg)] dark:bg-[#1a1a1a] text-[var(--asana-text)] dark:text-white"
+                  : "text-[var(--asana-text-secondary)] hover:text-[var(--asana-text)] dark:hover:text-white hover:bg-[var(--asana-bg)] dark:hover:bg-[#3a3b3d]"
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+              </svg>
+              Board
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Search */}
+            <div className="relative">
+              <svg className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--asana-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Filter..."
+                className="w-40 pl-8 pr-3 py-1.5 text-sm bg-[var(--asana-bg)] dark:bg-[#1a1a1a] border border-[var(--asana-border)] rounded-lg outline-none focus:ring-1 focus:ring-[var(--asana-accent)] text-[var(--asana-text)] dark:text-white placeholder-[var(--asana-text-secondary)]"
+              />
+            </div>
+
+            {/* Label filter */}
+            {board.labels.length > 0 && (
+              <select
+                value={filterLabel || ""}
+                onChange={(e) => setFilterLabel(e.target.value || null)}
+                className="text-sm bg-[var(--asana-bg)] dark:bg-[#1a1a1a] border border-[var(--asana-border)] rounded-lg px-2 py-1.5 outline-none text-[var(--asana-text)] dark:text-white"
+              >
+                <option value="">All Labels</option>
+                {board.labels.map((l) => (
+                  <option key={l.id} value={l.id}>{l.name}</option>
+                ))}
+              </select>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Card Detail Modal */}
+      {/* Content area */}
+      <div className="flex-1 overflow-hidden">
+        {viewMode === "list" ? (
+          <div className="h-full overflow-y-auto">
+            <ListView
+              lists={filteredLists}
+              onCardClick={(cardId) => setSelectedCardId(cardId)}
+              onAddCard={handleAddCard}
+            />
+          </div>
+        ) : (
+          <div className="h-full overflow-x-auto p-4">
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCorners}
+              onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
+              onDragEnd={handleDragEnd}
+            >
+              <div className="flex gap-3 h-full items-start">
+                {filteredLists.map((list) => (
+                  <List
+                    key={list.id}
+                    id={list.id}
+                    title={list.title}
+                    cards={list.cards}
+                    onRefresh={fetchBoard}
+                    onCardClick={(cardId) => setSelectedCardId(cardId)}
+                    onDelete={fetchBoard}
+                  />
+                ))}
+                <AddList boardId={board.id} onAdd={fetchBoard} />
+              </div>
+
+              <DragOverlay>
+                {activeCard ? (
+                  <div className="bg-[var(--asana-bg-white)] dark:bg-[#3a3b3d] rounded-lg shadow-xl border border-[var(--asana-border)] p-3 w-64 opacity-90 rotate-2">
+                    <p className="text-sm text-[var(--asana-text)] dark:text-white font-medium">{activeCard.title}</p>
+                  </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+          </div>
+        )}
+      </div>
+
+      {/* Task Detail Panel (right side) */}
       {selectedCardId && (
-        <CardDetail
+        <TaskDetailPanel
           cardId={selectedCardId}
           boardLabels={board.labels}
           boardMembers={board.members.map((m) => m.user)}
@@ -340,7 +404,6 @@ export default function BoardView({ boardId }: BoardViewProps) {
         />
       )}
 
-      {/* Slack Settings Modal */}
       {showSlack && (
         <SlackSettings
           boardId={board.id}
@@ -353,7 +416,6 @@ export default function BoardView({ boardId }: BoardViewProps) {
         />
       )}
 
-      {/* Members Modal */}
       {showMembers && (
         <MemberList
           boardId={board.id}

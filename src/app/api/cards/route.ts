@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
     // Get max position in the list
     const lastCard = await prisma.card.findFirst({
-      where: { listId },
+      where: { listId, deletedAt: null },
       orderBy: { position: "desc" },
     });
 

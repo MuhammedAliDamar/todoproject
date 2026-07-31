@@ -35,17 +35,17 @@ export default function Modal({ isOpen, onClose, children, title, size = "md" }:
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-12 px-4">
-      <div className="fixed inset-0 bg-black/50 dark:bg-black/70" onClick={onClose} />
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 px-4">
+      <div className="fixed inset-0 bg-black/40" onClick={onClose} />
       <div
-        className={`relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full ${sizeClasses[size]} max-h-[85vh] overflow-y-auto z-10`}
+        className={`relative bg-[var(--asana-bg-white)] dark:bg-[#2e2f31] rounded-xl shadow-2xl w-full ${sizeClasses[size]} max-h-[80vh] overflow-y-auto z-10 border border-[var(--asana-border)]`}
       >
         {title && (
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">{title}</h2>
+          <div className="flex items-center justify-between p-5 border-b border-[var(--asana-border)]">
+            <h2 className="text-lg font-semibold text-[var(--asana-text)] dark:text-white">{title}</h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition p-1"
+              className="text-[var(--asana-text-secondary)] hover:text-[var(--asana-text)] dark:hover:text-white transition p-1 hover:bg-[var(--asana-bg)] dark:hover:bg-[#3a3b3d] rounded"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -53,7 +53,7 @@ export default function Modal({ isOpen, onClose, children, title, size = "md" }:
             </button>
           </div>
         )}
-        <div className="p-4">{children}</div>
+        <div className="p-5">{children}</div>
       </div>
     </div>
   );
