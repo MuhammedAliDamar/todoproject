@@ -400,7 +400,7 @@ export default function CardDetail({ cardId, boardLabels, boardMembers, isOwner,
                     className="w-full min-h-[3.5rem] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-y overflow-hidden bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                     rows={2}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
+                      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                         e.preventDefault();
                         addComment();
                       }
@@ -427,7 +427,7 @@ export default function CardDetail({ cardId, boardLabels, boardMembers, isOwner,
                           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{c.user.name}</span>
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-gray-400">{formatDateTime(c.createdAt)}</span>
-                            {isOwner && (
+                            {(isOwner || c.user.id === user?.id) && (
                               <button
                                 onClick={() => deleteComment(c.id)}
                                 className="text-gray-300 dark:text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition text-xs"

@@ -108,13 +108,17 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const userId = req.headers.get("x-user-id")!;
     const { commentId } = await req.json();
 
-    const role = await getCardBoardRole(cardId, userId);
-    if (!role) return errorResponse("You don't have permission", 403);
-    if (role !== "OWNER") return errorResponse("Only the board owner can delete", 403);
+    const hasAccess = await verifyCardAccess(cardId, userId);
+    if (!hasAccess) return errorResponse("You don't have permission", 403);
 
     const comment = await prisma.comment.findUnique({ where: { id: commentId } });
     if (!comment) {
       return errorResponse("Comment not found", 404);
+    }
+
+    if (comment.userId !== userId) {
+      const role = await getCardBoardRole(cardId, userId);
+      if (role !== "OWNER") return errorResponse("You can only delete your own comments", 403);
     }
 
     await prisma.comment.update({ where: { id: commentId }, data: { deletedAt: new Date() } });
