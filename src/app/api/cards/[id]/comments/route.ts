@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { jsonResponse, errorResponse, verifyCardAccess, getCardBoardRole } from "@/lib/utils";
+import { jsonResponse, errorResponse, verifyCardAccess } from "@/lib/utils";
 import { notifyCommentAdded } from "@/lib/slack";
 import { sendMail } from "@/lib/mail";
 import { notifyCommentDM } from "@/lib/slack";
@@ -112,14 +112,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (!hasAccess) return errorResponse("You don't have permission", 403);
 
     const comment = await prisma.comment.findUnique({ where: { id: commentId } });
-    if (!comment) {
-      return errorResponse("Comment not found", 404);
-    }
-
-    if (comment.userId !== userId) {
-      const role = await getCardBoardRole(cardId, userId);
-      if (role !== "OWNER") return errorResponse("You can only delete your own comments", 403);
-    }
+    if (!comment) return errorResponse("Comment not found", 404);
+    if (comment.userId !== userId) return errorResponse("You can only delete your own comments", 403);
 
     await prisma.comment.update({ where: { id: commentId }, data: { deletedAt: new Date() } });
     return jsonResponse({ message: "Comment deleted" });
