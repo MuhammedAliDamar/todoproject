@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { jsonResponse, errorResponse, verifyCardAccess, getCardBoardRole } from "@/lib/utils";
+import { jsonResponse, errorResponse, verifyCardAccess } from "@/lib/utils";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -49,16 +49,18 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const { id: cardId } = await params;
     const userId = req.headers.get("x-user-id")!;
 
-    const role = await getCardBoardRole(cardId, userId);
-    if (!role) return errorResponse("You don't have permission", 403);
-    if (role !== "OWNER") return errorResponse("Only the board owner can delete", 403);
+    const hasAccess = await verifyCardAccess(cardId, userId);
+    if (!hasAccess) return errorResponse("You don't have permission", 403);
 
     const { checklistId, itemId } = await req.json();
 
     if (itemId) {
       await prisma.checklistItem.update({ where: { id: itemId }, data: { deletedAt: new Date() } });
     } else if (checklistId) {
-      await prisma.checklist.update({ where: { id: checklistId }, data: { deletedAt: new Date() } });
+      await prisma.$transaction([
+        prisma.checklist.update({ where: { id: checklistId }, data: { deletedAt: new Date() } }),
+        prisma.checklistItem.updateMany({ where: { checklistId }, data: { deletedAt: new Date() } }),
+      ]);
     }
 
     return jsonResponse({ message: "Deleted" });
