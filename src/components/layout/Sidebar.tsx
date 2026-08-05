@@ -3,6 +3,21 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface BoardItem {
   id: string;
@@ -17,11 +32,65 @@ interface TaskGroup {
   cards: { id: string; title: string; dueDate: string | null }[];
 }
 
+function SortableBoardItem({ board, isActive }: { board: BoardItem; isActive: boolean }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: board.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center group">
+      <button
+        {...attributes}
+        {...listeners}
+        className="p-1 opacity-0 group-hover:opacity-100 text-[var(--asana-sidebar-text)] hover:text-[var(--asana-sidebar-text-active)] cursor-grab active:cursor-grabbing transition-opacity shrink-0"
+      >
+        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="9" cy="6" r="1.5" />
+          <circle cx="15" cy="6" r="1.5" />
+          <circle cx="9" cy="12" r="1.5" />
+          <circle cx="15" cy="12" r="1.5" />
+          <circle cx="9" cy="18" r="1.5" />
+          <circle cx="15" cy="18" r="1.5" />
+        </svg>
+      </button>
+      <Link
+        href={`/board/${board.id}`}
+        className={`flex-1 flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors ${
+          isActive
+            ? "bg-[var(--asana-sidebar-active)] text-[var(--asana-sidebar-text-active)] font-medium"
+            : "text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)] hover:text-[var(--asana-sidebar-text-active)]"
+        }`}
+      >
+        <span
+          className="w-3 h-3 rounded-full shrink-0"
+          style={{ backgroundColor: board.background }}
+        />
+        <span className="truncate">{board.title}</span>
+      </Link>
+    </div>
+  );
+}
+
 export default function Sidebar() {
   const pathname = usePathname();
   const [boards, setBoards] = useState<BoardItem[]>([]);
   const [tasks, setTasks] = useState<TaskGroup[]>([]);
   const [collapsed, setCollapsed] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
 
   useEffect(() => {
     fetch("/api/boards")
@@ -34,6 +103,22 @@ export default function Sidebar() {
       .then((data) => setTasks(Array.isArray(data) ? data : []))
       .catch(() => setTasks([]));
   }, [pathname]);
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = boards.findIndex((b) => b.id === active.id);
+    const newIndex = boards.findIndex((b) => b.id === over.id);
+    const newBoards = arrayMove(boards, oldIndex, newIndex);
+    setBoards(newBoards);
+
+    await fetch("/api/boards/reorder", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderedBoardIds: newBoards.map((b) => b.id) }),
+    });
+  };
 
   const myTaskCount = tasks.reduce((sum, g) => sum + g.cards.length, 0);
 
@@ -179,31 +264,22 @@ export default function Sidebar() {
           </Link>
         </div>
 
-        <nav className="space-y-0.5">
-          {boards.map((board) => {
-            const isActive = pathname === `/board/${board.id}`;
-            return (
-              <Link
-                key={board.id}
-                href={`/board/${board.id}`}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                  isActive
-                    ? "bg-[var(--asana-sidebar-active)] text-[var(--asana-sidebar-text-active)] font-medium"
-                    : "text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)] hover:text-[var(--asana-sidebar-text-active)]"
-                }`}
-              >
-                <span
-                  className="w-3 h-3 rounded-full shrink-0"
-                  style={{ backgroundColor: board.background }}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={boards.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+            <nav className="space-y-0.5">
+              {boards.map((board) => (
+                <SortableBoardItem
+                  key={board.id}
+                  board={board}
+                  isActive={pathname === `/board/${board.id}`}
                 />
-                <span className="truncate">{board.title}</span>
-              </Link>
-            );
-          })}
-          {boards.length === 0 && (
-            <p className="px-3 py-2 text-sm text-[var(--asana-sidebar-text)]">No projects yet</p>
-          )}
-        </nav>
+              ))}
+              {boards.length === 0 && (
+                <p className="px-3 py-2 text-sm text-[var(--asana-sidebar-text)]">No projects yet</p>
+              )}
+            </nav>
+          </SortableContext>
+        </DndContext>
       </div>
     </aside>
   );

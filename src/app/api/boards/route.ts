@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
         deletedAt: null,
         OR: [
           { userId },
-          { members: { some: { userId } } },
+          { members: { some: { userId, deletedAt: null } } },
         ],
       },
       include: {
@@ -22,7 +22,12 @@ export async function GET(req: NextRequest) {
         },
         _count: { select: { lists: { where: { deletedAt: null } } } },
       },
-      orderBy: { createdAt: "desc" },
+    });
+
+    boards.sort((a, b) => {
+      const posA = a.members.find((m) => m.userId === userId)?.position ?? 0;
+      const posB = b.members.find((m) => m.userId === userId)?.position ?? 0;
+      return posA - posB;
     });
 
     return jsonResponse(boards);
