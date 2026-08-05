@@ -9,13 +9,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const userId = req.headers.get("x-user-id")!;
     const { email, role = "MEMBER" } = await req.json();
 
-    // Check if requester is owner
     const membership = await prisma.boardMember.findFirst({
-      where: { boardId, userId, role: "OWNER", deletedAt: null },
+      where: { boardId, userId, role: { in: ["OWNER", "MEMBER"] }, deletedAt: null },
     });
 
     if (!membership) {
-      return errorResponse("Only the board owner can add members", 403);
+      return errorResponse("Only board owners and members can add members", 403);
     }
 
     const targetUser = await prisma.user.findUnique({ where: { email } });

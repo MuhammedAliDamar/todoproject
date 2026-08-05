@@ -15,11 +15,12 @@ interface MemberListProps {
   boardId: string;
   members: Member[];
   isOwner: boolean;
+  canInvite: boolean;
   onClose: () => void;
   onUpdate: () => void;
 }
 
-export default function MemberList({ boardId, members, isOwner, onClose, onUpdate }: MemberListProps) {
+export default function MemberList({ boardId, members, isOwner, canInvite, onClose, onUpdate }: MemberListProps) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"MEMBER" | "VIEWER">("MEMBER");
   const [loading, setLoading] = useState(false);
@@ -93,7 +94,7 @@ export default function MemberList({ boardId, members, isOwner, onClose, onUpdat
           ))}
         </div>
 
-        {isOwner && (
+        {canInvite && (
           <>
             <hr className="border-gray-200 dark:border-gray-700" />
             <h3 className="font-semibold text-gray-700 dark:text-gray-300 text-sm">Invite Member</h3>

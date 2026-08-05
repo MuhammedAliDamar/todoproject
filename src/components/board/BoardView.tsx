@@ -241,6 +241,10 @@ export default function BoardView({ boardId }: BoardViewProps) {
     (board.userId === user.id ||
       board.members.some((m) => m.role === "OWNER" && m.user.id === user.id));
 
+  const canInvite =
+    isOwner ||
+    (!!user && board.members.some((m) => m.role === "MEMBER" && m.user.id === user.id));
+
   return (
     <div className="h-[calc(100vh-3.5rem)] flex flex-col bg-[var(--asana-bg)] dark:bg-[var(--asana-bg)]">
       {/* Project header */}
@@ -421,6 +425,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
           boardId={board.id}
           members={board.members}
           isOwner={isOwner}
+          canInvite={canInvite}
           onClose={() => setShowMembers(false)}
           onUpdate={fetchBoard}
         />
