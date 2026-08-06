@@ -18,6 +18,7 @@ import AddList from "./AddList";
 import ListView from "./ListView";
 import TaskDetailPanel from "./TaskDetailPanel";
 import MemberList from "./MemberList";
+import TrashList from "./TrashList";
 import SlackSettings from "./SlackSettings";
 import Button from "@/components/ui/Button";
 import { useAuth } from "@/context/AuthContext";
@@ -68,6 +69,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
   const [activeCard, setActiveCard] = useState<CardData | null>(null);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [showMembers, setShowMembers] = useState(false);
+  const [showTrash, setShowTrash] = useState(false);
   const [showSlack, setShowSlack] = useState(false);
   const [search, setSearch] = useState("");
   const [filterLabel, setFilterLabel] = useState<string | null>(null);
@@ -281,6 +283,12 @@ export default function BoardView({ boardId }: BoardViewProps) {
               ) : "Slack"}
             </Button>
 
+            <Button size="sm" variant="ghost" onClick={() => setShowTrash(true)}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </Button>
+
             <Button size="sm" variant="ghost" onClick={() => setShowMembers(true)}>
               Members ({board.members.length})
             </Button>
@@ -403,6 +411,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
           boardLabels={board.labels}
           boardMembers={board.members.map((m) => m.user)}
           isOwner={isOwner}
+          canDelete={canInvite}
           onClose={() => setSelectedCardId(null)}
           onUpdate={fetchBoard}
         />
@@ -417,6 +426,15 @@ export default function BoardView({ boardId }: BoardViewProps) {
           slackTeamName={board.slackTeamName}
           onClose={() => setShowSlack(false)}
           onUpdate={fetchBoard}
+        />
+      )}
+
+      {showTrash && (
+        <TrashList
+          boardId={board.id}
+          isOwner={isOwner}
+          onClose={() => setShowTrash(false)}
+          onRestore={fetchBoard}
         />
       )}
 

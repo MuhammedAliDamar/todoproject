@@ -50,11 +50,12 @@ interface TaskDetailPanelProps {
   boardLabels: Label[];
   boardMembers: BoardUser[];
   isOwner: boolean;
+  canDelete: boolean;
   onClose: () => void;
   onUpdate: () => void;
 }
 
-export default function TaskDetailPanel({ cardId, boardLabels, boardMembers, isOwner, onClose, onUpdate }: TaskDetailPanelProps) {
+export default function TaskDetailPanel({ cardId, boardLabels, boardMembers, isOwner, canDelete, onClose, onUpdate }: TaskDetailPanelProps) {
   const [card, setCard] = useState<CardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [description, setDescription] = useState("");
@@ -229,7 +230,7 @@ export default function TaskDetailPanel({ cardId, boardLabels, boardMembers, isO
             <span className="px-2 py-0.5 bg-[var(--asana-bg)] dark:bg-[#1a1a1a] rounded">{card.list.title}</span>
           </div>
           <div className="flex items-center gap-1">
-            {isOwner && (
+            {canDelete && (
               <button
                 onClick={deleteCard}
                 className="p-1.5 text-[var(--asana-text-secondary)] hover:text-[var(--asana-accent)] hover:bg-[var(--asana-bg)] dark:hover:bg-[#3a3b3d] rounded transition"

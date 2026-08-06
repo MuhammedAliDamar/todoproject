@@ -113,7 +113,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     const role = await getCardBoardRole(id, userId);
     if (!role) return errorResponse("Card not found or you don't have permission", 403);
-    if (role !== "OWNER") return errorResponse("Only the board owner can delete", 403);
+    if (role === "VIEWER") return errorResponse("Viewers cannot delete tasks", 403);
 
     // Capture card info before deletion for Slack notification
     const cardInfo = await prisma.card.findUnique({
