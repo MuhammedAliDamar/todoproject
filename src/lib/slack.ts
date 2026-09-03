@@ -1,4 +1,67 @@
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
+
+/**
+ * Verifies a request came from Slack (slash commands / interactivity).
+ * https://api.slack.com/authentication/verifying-requests-from-slack
+ */
+export function verifySlackSignature(rawBody: string, timestamp: string | null, signature: string | null): boolean {
+  const secret = process.env.SLACK_SIGNING_SECRET;
+  if (!secret) {
+    console.error("SLACK_SIGNING_SECRET is not set");
+    return false;
+  }
+  if (!timestamp || !signature) return false;
+
+  // Replay protection: reject requests older than 5 minutes
+  const now = Math.floor(Date.now() / 1000);
+  if (Math.abs(now - Number(timestamp)) > 60 * 5) return false;
+
+  const base = `v0:${timestamp}:${rawBody}`;
+  const expected = "v0=" + crypto.createHmac("sha256", secret).update(base).digest("hex");
+  try {
+    return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Returns a bot token for the given workspace (team), falling back to any connected user.
+ * Used for Slack Web API calls triggered from Slack (slash commands / interactions).
+ */
+export async function getWorkspaceToken(teamId?: string | null): Promise<string | null> {
+  if (teamId) {
+    const u = await prisma.user.findFirst({
+      where: { slackTeamId: teamId, slackToken: { not: null } },
+      select: { slackToken: true },
+    });
+    if (u?.slackToken) return u.slackToken;
+  }
+  const any = await prisma.user.findFirst({
+    where: { slackToken: { not: null } },
+    select: { slackToken: true },
+  });
+  return any?.slackToken || null;
+}
+
+/**
+ * Resolves an app User id from a Slack user id (matched by email via users.info).
+ */
+export async function resolveAppUserId(slackUserId: string, token: string): Promise<string | null> {
+  try {
+    const res = await fetch(`https://slack.com/api/users.info?user=${slackUserId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    const email: string | undefined = data?.user?.profile?.email;
+    if (!email) return null;
+    const user = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+    return user?.id || null;
+  } catch {
+    return null;
+  }
+}
 
 interface SlackBlock {
   type: string;
