@@ -14,6 +14,7 @@ Trello'nun "Create card" modalı gibi: board + liste seçilir, başlık girilir.
 - `POST /api/slack/interactions` (`src/app/api/slack/interactions/route.ts`) — interactivity.
   - `block_actions` (board seçimi) → o board'un listeleriyle `views.update`.
   - `view_submission` → kart oluşturur (seçilen listenin sonuna), activity yazar, `notifyCardCreated` + kullanıcıya ephemeral onay.
+- Modal alanları: başlık, açıklama (opsiyonel, multiline), board, liste, etiketler (board'a bağlı `Label`'lardan çoklu seçim, opsiyonel). Liste + etiketler board seçilince yüklenir. Etiketler `CardLabel` ile bağlanır (sadece o board'a ait olanlar).
 - Modal builder: `src/lib/slackModal.ts` (`buildTaskModal`, open+update'te paylaşılır).
 - Paylaşılan helper'lar `src/lib/slack.ts`: `verifySlackSignature`, `getWorkspaceToken`, `resolveAppUserId`.
 - Her iki endpoint middleware'de public.

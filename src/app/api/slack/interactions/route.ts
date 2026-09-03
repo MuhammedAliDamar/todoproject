@@ -41,12 +41,19 @@ export async function POST(req: NextRequest) {
       const meta = JSON.parse(payload.view?.private_metadata || "{}");
       const titleValue = payload.view?.state?.values?.title_block?.title?.value || undefined;
 
-      const [boards, lists] = await Promise.all([
+      const descValue = payload.view?.state?.values?.desc_block?.desc?.value || undefined;
+
+      const [boards, lists, labels] = await Promise.all([
         boardsForUser(meta.userId),
         prisma.list.findMany({
           where: { boardId, deletedAt: null },
           orderBy: { position: "asc" },
           select: { id: true, title: true },
+        }),
+        prisma.label.findMany({
+          where: { boardId },
+          orderBy: { name: "asc" },
+          select: { id: true, name: true },
         }),
       ]);
 
@@ -56,7 +63,9 @@ export async function POST(req: NextRequest) {
         boards,
         selectedBoardId: boardId,
         lists,
+        labels,
         titleValue,
+        descValue,
       });
 
       await fetch("https://slack.com/api/views.update", {
@@ -73,8 +82,12 @@ export async function POST(req: NextRequest) {
     const meta = JSON.parse(payload.view?.private_metadata || "{}");
     const values = payload.view?.state?.values || {};
     const title = (values.title_block?.title?.value || "").trim();
+    const description = (values.desc_block?.desc?.value || "").trim();
     const boardId = values.board_block?.board?.selected_option?.value;
     const listId = values.list_block?.list?.selected_option?.value;
+    const labelIds: string[] = (values.labels_block?.labels?.selected_options || []).map(
+      (o: { value: string }) => o.value
+    );
 
     const errors: Record<string, string> = {};
     if (!title) errors.title_block = "Başlık gerekli";
@@ -93,8 +106,27 @@ export async function POST(req: NextRequest) {
     });
 
     const card = await prisma.card.create({
-      data: { title, listId, position: (lastCard?.position ?? -1) + 1 },
+      data: {
+        title,
+        description: description || null,
+        listId,
+        position: (lastCard?.position ?? -1) + 1,
+      },
     });
+
+    // Attach selected labels (only those that actually belong to this board)
+    if (labelIds.length) {
+      const validLabels = await prisma.label.findMany({
+        where: { id: { in: labelIds }, boardId },
+        select: { id: true },
+      });
+      if (validLabels.length) {
+        await prisma.cardLabel.createMany({
+          data: validLabels.map((l) => ({ cardId: card.id, labelId: l.id })),
+          skipDuplicates: true,
+        });
+      }
+    }
 
     await prisma.activity.create({
       data: { action: `created card "${card.title}" via Slack`, cardId: card.id, userId },
