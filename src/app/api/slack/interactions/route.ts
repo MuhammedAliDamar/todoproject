@@ -62,17 +62,12 @@ export async function POST(req: NextRequest) {
 
       const descValue = payload.view?.state?.values?.desc_block?.desc?.value || undefined;
 
-      const [boards, lists, labels, members] = await Promise.all([
+      const [boards, lists, members] = await Promise.all([
         boardsForUser(meta.userId),
         prisma.list.findMany({
           where: { boardId, deletedAt: null },
           orderBy: { position: "asc" },
           select: { id: true, title: true },
-        }),
-        prisma.label.findMany({
-          where: { boardId },
-          orderBy: { name: "asc" },
-          select: { id: true, name: true },
         }),
         boardMembersFor(boardId),
       ]);
@@ -83,7 +78,6 @@ export async function POST(req: NextRequest) {
         boards,
         selectedBoardId: boardId,
         lists,
-        labels,
         members,
         titleValue,
         descValue,
@@ -106,9 +100,6 @@ export async function POST(req: NextRequest) {
     const description = (values.desc_block?.desc?.value || "").trim();
     const boardId = values.board_block?.board?.selected_option?.value;
     const listId = values.list_block?.list?.selected_option?.value;
-    const labelIds: string[] = (values.labels_block?.labels?.selected_options || []).map(
-      (o: { value: string }) => o.value
-    );
     const assigneeIds: string[] = (values.assignees_block?.assignees?.selected_options || []).map(
       (o: { value: string }) => o.value
     );
@@ -137,20 +128,6 @@ export async function POST(req: NextRequest) {
         position: (lastCard?.position ?? -1) + 1,
       },
     });
-
-    // Attach selected labels (only those that actually belong to this board)
-    if (labelIds.length) {
-      const validLabels = await prisma.label.findMany({
-        where: { id: { in: labelIds }, boardId },
-        select: { id: true },
-      });
-      if (validLabels.length) {
-        await prisma.cardLabel.createMany({
-          data: validLabels.map((l) => ({ cardId: card.id, labelId: l.id })),
-          skipDuplicates: true,
-        });
-      }
-    }
 
     await prisma.activity.create({
       data: { action: `created card "${card.title}" via Slack`, cardId: card.id, userId },

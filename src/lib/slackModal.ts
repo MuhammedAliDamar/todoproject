@@ -10,7 +10,6 @@ interface BuildArgs {
   boards: { id: string; title: string }[];
   selectedBoardId?: string;
   lists?: { id: string; title: string }[];
-  labels?: { id: string; name: string }[];
   members?: { id: string; name: string }[];
   titleValue?: string;
   descValue?: string;
@@ -26,7 +25,6 @@ export function buildTaskModal({
   boards,
   selectedBoardId,
   lists = [],
-  labels = [],
   members = [],
   titleValue,
   descValue,
@@ -95,21 +93,6 @@ export function buildTaskModal({
       });
     }
 
-    if (labels.length) {
-      blocks.push({
-        type: "input",
-        block_id: "labels_block",
-        optional: true,
-        element: {
-          type: "multi_static_select",
-          action_id: "labels",
-          placeholder: { type: "plain_text", text: "Etiket seç (opsiyonel)" },
-          options: labels.map((l) => opt(l.name, l.id)),
-        },
-        label: { type: "plain_text", text: "Etiketler" },
-      });
-    }
-
     if (members.length) {
       blocks.push({
         type: "input",
@@ -127,7 +110,7 @@ export function buildTaskModal({
   } else {
     blocks.push({
       type: "context",
-      elements: [{ type: "mrkdwn", text: "Board seçince liste ve etiketler yüklenir." }],
+      elements: [{ type: "mrkdwn", text: "Board seçince liste ve üyeler yüklenir." }],
     });
   }
 
