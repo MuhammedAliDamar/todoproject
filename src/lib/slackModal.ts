@@ -11,6 +11,7 @@ interface BuildArgs {
   selectedBoardId?: string;
   lists?: { id: string; title: string }[];
   labels?: { id: string; name: string }[];
+  members?: { id: string; name: string }[];
   titleValue?: string;
   descValue?: string;
 }
@@ -26,6 +27,7 @@ export function buildTaskModal({
   selectedBoardId,
   lists = [],
   labels = [],
+  members = [],
   titleValue,
   descValue,
 }: BuildArgs) {
@@ -105,6 +107,21 @@ export function buildTaskModal({
           options: labels.map((l) => opt(l.name, l.id)),
         },
         label: { type: "plain_text", text: "Etiketler" },
+      });
+    }
+
+    if (members.length) {
+      blocks.push({
+        type: "input",
+        block_id: "assignees_block",
+        optional: true,
+        element: {
+          type: "multi_static_select",
+          action_id: "assignees",
+          placeholder: { type: "plain_text", text: "Kişi ata (opsiyonel)" },
+          options: members.map((m) => opt(m.name, m.id)),
+        },
+        label: { type: "plain_text", text: "Atananlar" },
       });
     }
   } else {

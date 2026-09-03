@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifySlackSignature, getWorkspaceToken, notifyCardCreated } from "@/lib/slack";
+import { verifySlackSignature, getWorkspaceToken, notifyCardCreated, notifyTaskAssignedDM } from "@/lib/slack";
 import { buildTaskModal } from "@/lib/slackModal";
 
 async function boardsForUser(userId: string) {
@@ -13,6 +13,25 @@ async function boardsForUser(userId: string) {
     select: { id: true, title: true },
     take: 100,
   });
+}
+
+// Board owner + active members, deduped.
+async function boardMembersFor(boardId: string) {
+  const board = await prisma.board.findUnique({
+    where: { id: boardId },
+    select: {
+      user: { select: { id: true, name: true } },
+      members: {
+        where: { deletedAt: null },
+        select: { user: { select: { id: true, name: true } } },
+      },
+    },
+  });
+  if (!board) return [];
+  const map = new Map<string, string>();
+  map.set(board.user.id, board.user.name);
+  for (const m of board.members) map.set(m.user.id, m.user.name);
+  return [...map].map(([id, name]) => ({ id, name }));
 }
 
 /**
@@ -43,7 +62,7 @@ export async function POST(req: NextRequest) {
 
       const descValue = payload.view?.state?.values?.desc_block?.desc?.value || undefined;
 
-      const [boards, lists, labels] = await Promise.all([
+      const [boards, lists, labels, members] = await Promise.all([
         boardsForUser(meta.userId),
         prisma.list.findMany({
           where: { boardId, deletedAt: null },
@@ -55,6 +74,7 @@ export async function POST(req: NextRequest) {
           orderBy: { name: "asc" },
           select: { id: true, name: true },
         }),
+        boardMembersFor(boardId),
       ]);
 
       const view = buildTaskModal({
@@ -64,6 +84,7 @@ export async function POST(req: NextRequest) {
         selectedBoardId: boardId,
         lists,
         labels,
+        members,
         titleValue,
         descValue,
       });
@@ -86,6 +107,9 @@ export async function POST(req: NextRequest) {
     const boardId = values.board_block?.board?.selected_option?.value;
     const listId = values.list_block?.list?.selected_option?.value;
     const labelIds: string[] = (values.labels_block?.labels?.selected_options || []).map(
+      (o: { value: string }) => o.value
+    );
+    const assigneeIds: string[] = (values.assignees_block?.assignees?.selected_options || []).map(
       (o: { value: string }) => o.value
     );
 
@@ -139,6 +163,36 @@ export async function POST(req: NextRequest) {
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
     if (list) {
       notifyCardCreated(list.board.id, user?.name || "Slack", card.title, list.title, list.board.title);
+    }
+
+    // Assign selected members (only real board members) + notify them
+    if (assigneeIds.length && list) {
+      const validMembers = await boardMembersFor(boardId);
+      const validIds = new Set(validMembers.map((m) => m.id));
+      const toAssign = [...new Set(assigneeIds)].filter((id) => validIds.has(id));
+      if (toAssign.length) {
+        await prisma.cardAssignee.createMany({
+          data: toAssign.map((id) => ({ cardId: card.id, userId: id })),
+          skipDuplicates: true,
+        });
+
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+        const assignees = await prisma.user.findMany({
+          where: { id: { in: toAssign } },
+          select: { email: true },
+        });
+        for (const a of assignees) {
+          notifyTaskAssignedDM(
+            list.board.id,
+            a.email,
+            user?.name || "Slack",
+            card.title,
+            list.board.title,
+            appUrl,
+            list.board.id
+          );
+        }
+      }
     }
 
     // Best-effort ephemeral confirmation back in the channel the command was run in
