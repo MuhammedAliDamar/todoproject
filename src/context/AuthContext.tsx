@@ -26,6 +26,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   const fetchUser = useCallback(async () => {
+    // Widget iframe'inde (herkese açık ziyaretçi) giriş kontrolü yapma — gereksiz 401 üretmesin
+    if (typeof window !== "undefined" && window.location.pathname.startsWith("/widget")) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
     try {
       const res = await fetch("/api/auth/me");
       if (res.ok) {
