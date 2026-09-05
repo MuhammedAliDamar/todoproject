@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonResponse, errorResponse } from "@/lib/utils";
 import { publish, websiteTopic } from "@/lib/chatBus";
+import { rateLimit, cap } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,8 +15,18 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: NextRequest) {
   try {
-    const { publicKey, token, currentUrl, typing, read, timezone, language } = await req.json();
+    const raw = await req.json();
+    const { publicKey, token, typing, read } = raw;
     if (!publicKey || !token) return errorResponse("Invalid payload", 400);
+
+    // Rate limit: token başına 120/dk (heartbeat 30s + typing 2s throttle + read)
+    if (!rateLimit(`wping:${token}`, 120, 60_000)) {
+      return errorResponse("Çok fazla istek", 429);
+    }
+
+    const currentUrl = cap(raw.currentUrl, 2048);
+    const timezone = cap(raw.timezone, 64);
+    const language = cap(raw.language, 32);
 
     const website = await prisma.website.findFirst({
       where: { publicKey, deletedAt: null, active: true },

@@ -40,6 +40,9 @@ Yardımcılar `src/lib/chat.ts`: `getClientIp`, `enrichVisitorGeo` (fire-and-for
 - **Siteye göre kategorize:** inbox'ta site dropdown filtresi; konuşma listesinde renkli site rozeti + isim.
 - Sidebar'a "Canlı Destek" (`/chat`) ve "Web Siteleri" (`/websites`) linkleri; `/chat`'te sidebar varsayılan **kapalı** (geniş 3-pane).
 
+### Güvenlik (public endpoint sertleştirme)
+`src/lib/rateLimit.ts` — süreç-içi sabit-pencere rate limiter (tek instance fork için yeterli) + `cap()` girdi kırpma. Uygulanan limitler: `session` 40/dk (IP), `message` 20/dk (token)+40/dk (IP), `ping` 120/dk (token); aşınca 429. Mesaj gövdesi `MAX_MESSAGE_LEN=4000`. Session/ping alanları (currentUrl 2048, referrer 2048, timezone 64, language 32, userAgent 512) kırpılır. XSS yok (React text render), SQLi yok (Prisma), auth cookie httpOnly+sameSite=lax+secure. Not: domain/origin allowlist yok — widget iframe kendi origin'imizden çalıştığı için Origin kontrolü uygulanabilir değil; kötüye kullanım rate-limit ile sınırlanır.
+
 ### Middleware
 `/api/widget` ve `/widget` public path'lerde. Widget iframe cross-origin gömülebilsin diye public branch `X-Frame-Options` set etmez.
 

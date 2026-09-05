@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { jsonResponse, errorResponse } from "@/lib/utils";
 import { publish, visitorTopic, websiteTopic } from "@/lib/chatBus";
 import { canAccessWebsite } from "@/lib/chat";
+import { MAX_MESSAGE_LEN } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +22,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const { body } = await req.json();
     if (!body?.trim()) return errorResponse("Boş mesaj", 400);
+    if (body.length > MAX_MESSAGE_LEN) return errorResponse("Mesaj çok uzun", 400);
 
     const message = await prisma.chatMessage.create({
       data: { conversationId: id, sender: "OPERATOR", userId, body: body.trim() },

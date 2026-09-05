@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonResponse, errorResponse } from "@/lib/utils";
 import { publish, publishAll, websiteTopic, visitorTopic } from "@/lib/chatBus";
+import { getClientIp } from "@/lib/chat";
+import { rateLimit, MAX_MESSAGE_LEN } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,6 +16,15 @@ export async function POST(req: NextRequest) {
   try {
     const { publicKey, token, body } = await req.json();
     if (!publicKey || !token || !body?.trim()) return errorResponse("Invalid payload", 400);
+
+    // Uzunluk sınırı (DoS/dev boyutlu mesaj)
+    if (body.length > MAX_MESSAGE_LEN) return errorResponse("Mesaj çok uzun", 400);
+
+    // Rate limit: ziyaretçi başına 20/dk, IP başına 40/dk
+    const ip = getClientIp(req) || "unknown";
+    if (!rateLimit(`wmsg:${token}`, 20, 60_000) || !rateLimit(`wmsgip:${ip}`, 40, 60_000)) {
+      return errorResponse("Çok fazla istek, lütfen bekleyin", 429);
+    }
 
     const website = await prisma.website.findFirst({
       where: { publicKey, deletedAt: null, active: true },

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { jsonResponse, errorResponse } from "@/lib/utils";
 import { getClientIp, enrichVisitorGeo, publicWebsiteConfig, tzToLocation } from "@/lib/chat";
 import { publish, websiteTopic } from "@/lib/chatBus";
+import { rateLimit, cap } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,16 +14,29 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: NextRequest) {
   try {
-    const { publicKey, token, currentUrl, referrer, timezone, language } = await req.json();
+    const raw = await req.json();
+    const publicKey = raw.publicKey;
+    const token = raw.token;
     if (!publicKey) return errorResponse("publicKey required", 400);
+
+    const ip = getClientIp(req);
+    // Rate limit: IP başına 40/dk (yeni ziyaretçi/oturum flood'u)
+    if (!rateLimit(`wsess:${ip || "unknown"}`, 40, 60_000)) {
+      return errorResponse("Çok fazla istek, lütfen bekleyin", 429);
+    }
+
+    // Girdileri güvenli üst sınırlara kırp
+    const currentUrl = cap(raw.currentUrl, 2048);
+    const referrer = cap(raw.referrer, 2048);
+    const timezone = cap(raw.timezone, 64);
+    const language = cap(raw.language, 32);
 
     const website = await prisma.website.findFirst({
       where: { publicKey, deletedAt: null, active: true },
     });
     if (!website) return errorResponse("Website not found", 404);
 
-    const ip = getClientIp(req);
-    const userAgent = req.headers.get("user-agent") || null;
+    const userAgent = cap(req.headers.get("user-agent"), 512);
     // Saat diliminden konum tahmini (IP geo yoksa/gelene kadar kullanılır)
     const tzLoc = tzToLocation(typeof timezone === "string" ? timezone : null);
 
