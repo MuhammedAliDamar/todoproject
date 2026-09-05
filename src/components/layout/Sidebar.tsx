@@ -88,6 +88,11 @@ export default function Sidebar() {
   const [tasks, setTasks] = useState<TaskGroup[]>([]);
   const [collapsed, setCollapsed] = useState(false);
 
+  // Canlı Destek (/chat) geniş 3-pane olduğundan kenar çubuğu varsayılan kapalı
+  useEffect(() => {
+    if (pathname === "/chat") setCollapsed(true);
+  }, [pathname]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
@@ -172,6 +177,32 @@ export default function Sidebar() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
           </svg>
         </Link>
+        <Link
+          href="/chat"
+          className={`p-2 rounded-lg transition mb-1 ${
+            pathname === "/chat"
+              ? "bg-[var(--asana-sidebar-active)] text-[var(--asana-sidebar-text-active)]"
+              : "text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)]"
+          }`}
+          title="Canlı Destek"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4-.8L3 20l1.3-3.9A7.96 7.96 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+        </Link>
+        <Link
+          href="/websites"
+          className={`p-2 rounded-lg transition mb-1 ${
+            pathname === "/websites"
+              ? "bg-[var(--asana-sidebar-active)] text-[var(--asana-sidebar-text-active)]"
+              : "text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)]"
+          }`}
+          title="Web Siteleri"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z M3.6 9h16.8 M3.6 15h16.8 M12 3a15 15 0 010 18 15 15 0 010-18z" />
+          </svg>
+        </Link>
       </aside>
     );
   }
@@ -240,6 +271,34 @@ export default function Sidebar() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
             </svg>
             Inbox
+          </Link>
+
+          <Link
+            href="/chat"
+            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              pathname === "/chat"
+                ? "bg-[var(--asana-sidebar-active)] text-[var(--asana-sidebar-text-active)]"
+                : "text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)] hover:text-[var(--asana-sidebar-text-active)]"
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4-.8L3 20l1.3-3.9A7.96 7.96 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            Canlı Destek
+          </Link>
+
+          <Link
+            href="/websites"
+            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              pathname === "/websites"
+                ? "bg-[var(--asana-sidebar-active)] text-[var(--asana-sidebar-text-active)]"
+                : "text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)] hover:text-[var(--asana-sidebar-text-active)]"
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z M3.6 9h16.8 M3.6 15h16.8 M12 3a15 15 0 010 18 15 15 0 010-18z" />
+            </svg>
+            Web Siteleri
           </Link>
         </nav>
       </div>

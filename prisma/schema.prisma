@@ -30,6 +30,10 @@ model User {
   comments        Comment[]
   assignedCards   CardAssignee[]
   resetTokens     PasswordResetToken[]
+  websites        Website[]
+  chatMessages    ChatMessage[]
+  assignedConversations Conversation[]
+  websiteMemberships WebsiteMember[]
 }
 
 model PasswordResetToken {
@@ -191,4 +195,110 @@ model Activity {
   createdAt DateTime @default(now())
   card      Card?    @relation(fields: [cardId], references: [id], onDelete: SetNull)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ── Live chat (Crisp klonu) ──────────────────────────────────────────
+
+/// Bir web sitesi = bir chat kutusu. publicKey embed script'te kullanılır.
+model Website {
+  id              String         @id @default(cuid())
+  name            String
+  domain          String?
+  publicKey       String         @unique @default(cuid())
+  // Widget görünüm ayarları
+  color           String         @default("#1e88e5")
+  welcomeMessage  String         @default("Merhaba! Size nasıl yardımcı olabiliriz?")
+  operatorName    String         @default("Destek")
+  position        String         @default("right") // right | left
+  active          Boolean        @default(true)
+  userId          String
+  createdAt       DateTime       @default(now())
+  deletedAt       DateTime?
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  visitors        Visitor[]
+  conversations   Conversation[]
+  members         WebsiteMember[]
+
+  @@index([userId])
+}
+
+/// Bir siteye atanmış operatör (sahip dışındaki kullanıcılar). Kaldırma = soft-delete.
+model WebsiteMember {
+  id        String    @id @default(cuid())
+  websiteId String
+  userId    String
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+  website   Website   @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([websiteId, userId])
+  @@index([userId])
+}
+
+/// Widget'ı açan bir ziyaretçi. token kalıcı çerezle eşlenir.
+model Visitor {
+  id            String         @id @default(cuid())
+  token         String         @unique @default(cuid())
+  websiteId     String
+  name          String?
+  email         String?
+  ip            String?
+  userAgent     String?
+  country       String?
+  city          String?
+  timezone      String?  // IANA tz, ör. "Europe/Istanbul" (tarayıcıdan)
+  language      String?  // navigator.language, ör. "tr-TR"
+  currentUrl    String?
+  referrer      String?
+  online        Boolean        @default(false)
+  lastSeenAt    DateTime       @default(now())
+  createdAt     DateTime       @default(now())
+  website       Website        @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+
+  @@index([websiteId])
+}
+
+enum ConversationStatus {
+  OPEN
+  RESOLVED
+}
+
+model Conversation {
+  id             String             @id @default(cuid())
+  websiteId      String
+  visitorId      String
+  status         ConversationStatus @default(OPEN)
+  assignedUserId String?
+  lastMessageAt  DateTime           @default(now())
+  visitorUnread  Int                @default(0) // ziyaretçinin okumadığı (operatör mesajı) sayısı
+  operatorUnread Int                @default(0) // operatörün okumadığı (ziyaretçi mesajı) sayısı
+  createdAt      DateTime           @default(now())
+  website        Website            @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  visitor        Visitor            @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  assignedUser   User?              @relation(fields: [assignedUserId], references: [id], onDelete: SetNull)
+  messages       ChatMessage[]
+
+  @@index([websiteId])
+  @@index([visitorId])
+}
+
+enum ChatSender {
+  VISITOR
+  OPERATOR
+}
+
+model ChatMessage {
+  id             String       @id @default(cuid())
+  conversationId String
+  sender         ChatSender
+  userId         String?      // operatör mesajıysa gönderen kullanıcı
+  body           String
+  readAt         DateTime?    // karşı tarafça okunma zamanı
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId])
 }
