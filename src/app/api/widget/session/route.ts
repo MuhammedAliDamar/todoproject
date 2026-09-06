@@ -119,6 +119,8 @@ export async function POST(req: NextRequest) {
         id: m.id,
         sender: m.sender,
         body: m.body,
+        attachmentUrl: m.attachmentUrl,
+        attachmentType: m.attachmentType,
         createdAt: m.createdAt,
         readAt: m.readAt,
         // Ziyaretçiye operatörün gerçek adı gösterilmez; site ayarındaki isim (ör. "Support")

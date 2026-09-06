@@ -48,6 +48,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         id: m.id,
         sender: m.sender,
         body: m.body,
+        attachmentUrl: m.attachmentUrl,
+        attachmentType: m.attachmentType,
         createdAt: m.createdAt,
         readAt: m.readAt,
         operator: m.user ? { name: m.user.name, avatar: m.user.avatar } : null,

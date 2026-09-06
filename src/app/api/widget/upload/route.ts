@@ -3,27 +3,31 @@ import { prisma } from "@/lib/prisma";
 import { jsonResponse, errorResponse } from "@/lib/utils";
 import { publish, publishAll, websiteTopic, visitorTopic } from "@/lib/chatBus";
 import { getClientIp } from "@/lib/chat";
-import { rateLimit, MAX_MESSAGE_LEN } from "@/lib/rateLimit";
+import { rateLimit } from "@/lib/rateLimit";
+import { saveImageUpload } from "@/lib/upload";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Ziyaretçi mesaj gönderir. Açık konuşma yoksa oluşturur.
- * Body: { publicKey, token, body }
+ * Ziyaretçi resim eki gönderir (multipart/form-data: publicKey, token, file).
+ * Sadece gerçek resim dosyaları (magic-byte doğrulaması) kabul edilir.
  */
 export async function POST(req: NextRequest) {
   try {
-    const { publicKey, token, body } = await req.json();
-    if (!publicKey || !token || !body?.trim()) return errorResponse("Invalid payload", 400);
-
-    // Uzunluk sınırı (DoS/dev boyutlu mesaj)
-    if (body.length > MAX_MESSAGE_LEN) return errorResponse("Message too long", 400);
-
-    // Rate limit: ziyaretçi başına 20/dk, IP başına 40/dk
     const ip = getClientIp(req) || "unknown";
-    if (!rateLimit(`wmsg:${token}`, 20, 60_000) || !rateLimit(`wmsgip:${ip}`, 40, 60_000)) {
-      return errorResponse("Too many requests, please wait", 429);
+
+    const form = await req.formData();
+    const publicKey = form.get("publicKey");
+    const token = form.get("token");
+    const file = form.get("file");
+    if (typeof publicKey !== "string" || typeof token !== "string" || !(file instanceof File)) {
+      return errorResponse("Invalid payload", 400);
+    }
+
+    // Rate limit: yükleme daha maliyetli → ziyaretçi 10/dk, IP 20/dk
+    if (!rateLimit(`wupl:${token}`, 10, 60_000) || !rateLimit(`wuplip:${ip}`, 20, 60_000)) {
+      return errorResponse("Too many uploads, please wait", 429);
     }
 
     const website = await prisma.website.findFirst({
@@ -33,6 +37,9 @@ export async function POST(req: NextRequest) {
 
     const visitor = await prisma.visitor.findFirst({ where: { token, websiteId: website.id } });
     if (!visitor) return errorResponse("Visitor not found", 404);
+
+    const saved = await saveImageUpload(file);
+    if ("error" in saved) return errorResponse(saved.error, 400);
 
     // Açık konuşmayı bul ya da oluştur
     let conversation = await prisma.conversation.findFirst({
@@ -47,18 +54,19 @@ export async function POST(req: NextRequest) {
     }
 
     const message = await prisma.chatMessage.create({
-      data: { conversationId: conversation.id, sender: "VISITOR", body: body.trim() },
+      data: {
+        conversationId: conversation.id,
+        sender: "VISITOR",
+        body: "",
+        attachmentUrl: saved.url,
+        attachmentType: "image",
+      },
     });
 
     await prisma.conversation.update({
       where: { id: conversation.id },
-      data: {
-        lastMessageAt: new Date(),
-        status: "OPEN",
-        operatorUnread: { increment: 1 },
-      },
+      data: { lastMessageAt: new Date(), status: "OPEN", operatorUnread: { increment: 1 } },
     });
-
     await prisma.visitor.update({
       where: { id: visitor.id },
       data: { online: true, lastSeenAt: new Date() },
@@ -76,28 +84,15 @@ export async function POST(req: NextRequest) {
       operator: null,
     };
 
-    // Operatör paneline (yeni konuşma + mesaj) bildir
     if (isNew) {
       const full = await prisma.conversation.findUnique({
         where: { id: conversation.id },
-        include: {
-          visitor: true,
-          messages: { orderBy: { createdAt: "asc" } },
-        },
+        include: { visitor: true, messages: { orderBy: { createdAt: "asc" } } },
       });
       publish(websiteTopic(website.id), { type: "conversation", conversation: full });
     }
-    publish(websiteTopic(website.id), {
-      type: "message",
-      conversationId: conversation.id,
-      message: payload,
-    });
-    // Ziyaretçinin diğer sekmeleri de senkron olsun
-    publishAll([visitorTopic(visitor.id)], {
-      type: "message",
-      conversationId: conversation.id,
-      message: payload,
-    });
+    publish(websiteTopic(website.id), { type: "message", conversationId: conversation.id, message: payload });
+    publishAll([visitorTopic(visitor.id)], { type: "message", conversationId: conversation.id, message: payload });
 
     return jsonResponse({ message: payload, conversationId: conversation.id }, 201);
   } catch {

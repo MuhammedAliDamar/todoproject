@@ -9,11 +9,15 @@ interface Msg {
   id: string;
   sender: Sender;
   body: string;
+  attachmentUrl?: string | null;
+  attachmentType?: string | null;
   createdAt: string;
   readAt?: string | null;
   operator?: { name: string; avatar: string | null } | null;
   pending?: boolean;
 }
+
+const MAX_IMG = 5 * 1024 * 1024;
 interface Config {
   publicKey: string;
   color: string;
@@ -43,6 +47,8 @@ function WidgetInner() {
   const [unread, setUnread] = useState(0);
   const [convId, setConvId] = useState<string | null>(null);
 
+  const [uploadErr, setUploadErr] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const typingClear = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTypingSent = useRef(0);
@@ -216,6 +222,41 @@ function WidgetInner() {
     }
   };
 
+  const onPickImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = ""; // aynı dosya tekrar seçilebilsin
+    if (!f || !key || !token) return;
+    setUploadErr(null);
+    if (!f.type.startsWith("image/")) {
+      setUploadErr("Only image files are allowed");
+      return;
+    }
+    if (f.size > MAX_IMG) {
+      setUploadErr("Image cannot exceed 5MB");
+      return;
+    }
+    const tempId = "tmp-" + Date.now();
+    const preview = URL.createObjectURL(f);
+    setMessages((prev) => [
+      ...prev,
+      { id: tempId, sender: "VISITOR", body: "", attachmentUrl: preview, attachmentType: "image", createdAt: new Date().toISOString(), pending: true },
+    ]);
+    const fd = new FormData();
+    fd.append("publicKey", key);
+    fd.append("token", token);
+    fd.append("file", f);
+    const res = await fetch("/api/widget/upload", { method: "POST", body: fd });
+    if (res.ok) {
+      const data = await res.json();
+      setConvId(data.conversationId);
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? data.message : m)));
+    } else {
+      const d = await res.json().catch(() => ({}));
+      setUploadErr(d.error || "Upload failed");
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+    }
+  };
+
   const onInputChange = (v: string) => {
     setInput(v);
     const now = Date.now();
@@ -273,6 +314,7 @@ function WidgetInner() {
               name={m.sender === "OPERATOR" ? opName : undefined}
               pending={m.pending}
               seen={m.sender === "VISITOR" ? !!m.readAt : undefined}
+              attachmentUrl={m.attachmentType === "image" ? m.attachmentUrl : null}
             >
               {m.body}
             </Bubble>
@@ -286,7 +328,25 @@ function WidgetInner() {
         </div>
 
         {/* Girdi */}
+        {uploadErr && (
+          <div style={{ padding: "0 14px", color: "#ef4444", fontSize: 11 }}>{uploadErr}</div>
+        )}
         <div style={inputBar}>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp"
+            onChange={onPickImage}
+            style={{ display: "none" }}
+          />
+          <button
+            onClick={() => fileRef.current?.click()}
+            aria-label="Attach image"
+            title="Attach image"
+            style={attachBtn}
+          >
+            <ClipIcon />
+          </button>
           <input
             value={input}
             onChange={(e) => onInputChange(e.target.value)}
@@ -322,6 +382,7 @@ function Bubble({
   children,
   pending,
   seen,
+  attachmentUrl,
 }: {
   side: "left" | "right";
   color: string;
@@ -329,27 +390,46 @@ function Bubble({
   children: React.ReactNode;
   pending?: boolean;
   seen?: boolean;
+  attachmentUrl?: string | null;
 }) {
   const right = side === "right";
+  const hasText = typeof children === "string" ? children.trim().length > 0 : !!children;
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: right ? "flex-end" : "flex-start", marginBottom: 10 }}>
       {name && !right && <span style={{ fontSize: 11, color: "#8a8f98", margin: "0 0 3px 6px" }}>{name}</span>}
-      <div
-        style={{
-          maxWidth: "78%",
-          padding: "9px 13px",
-          borderRadius: right ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-          background: right ? color : "#f1f3f5",
-          color: right ? "#fff" : "#1e1f21",
-          fontSize: 14,
-          lineHeight: 1.45,
-          whiteSpace: "pre-wrap",
-          wordBreak: "break-word",
-          opacity: pending ? 0.6 : 1,
-        }}
-      >
-        {children}
-      </div>
+      {attachmentUrl && (
+        <a
+          href={attachmentUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ display: "block", marginBottom: hasText ? 4 : 0, opacity: pending ? 0.6 : 1 }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={attachmentUrl}
+            alt="attachment"
+            style={{ maxWidth: 220, maxHeight: 240, borderRadius: 12, display: "block", objectFit: "cover" }}
+          />
+        </a>
+      )}
+      {hasText && (
+        <div
+          style={{
+            maxWidth: "78%",
+            padding: "9px 13px",
+            borderRadius: right ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+            background: right ? color : "#f1f3f5",
+            color: right ? "#fff" : "#1e1f21",
+            fontSize: 14,
+            lineHeight: 1.45,
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+            opacity: pending ? 0.6 : 1,
+          }}
+        >
+          {children}
+        </div>
+      )}
       {right && seen && <span style={{ fontSize: 10, color: "#8a8f98", marginTop: 2, marginRight: 4 }}>Seen</span>}
     </div>
   );
@@ -387,6 +467,13 @@ function CloseIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
       <path d="M18 6 6 18M6 6l12 12" />
+    </svg>
+  );
+}
+function ClipIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8a8f98" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
     </svg>
   );
 }
@@ -492,6 +579,16 @@ const inputBox: React.CSSProperties = {
   padding: "9px 4px",
   background: "transparent",
   color: "#1e1f21",
+};
+const attachBtn: React.CSSProperties = {
+  background: "transparent",
+  border: "none",
+  cursor: "pointer",
+  padding: 4,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
 };
 const sendBtn: React.CSSProperties = {
   width: 38,

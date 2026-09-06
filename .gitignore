@@ -41,3 +41,9 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# user uploads (chat attachments etc.) — keep dirs, ignore files
+/public/uploads/*
+!/public/uploads/.gitkeep
+/public/uploads/chat/*
+!/public/uploads/chat/.gitkeep

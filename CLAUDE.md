@@ -17,7 +17,7 @@ Embed script'li widget + operatör inbox'ı + ziyaretçi takibi. Realtime = SSE 
 - `Visitor` — `token` (kalıcı, localStorage `mt_token_<key>`), `online`/`lastSeenAt`, `timezone`+`language` (tarayıcıdan: `Intl...timeZone`, `navigator.language`), `country`/`city`, `currentUrl`, `referrer`, `ip`, `userAgent`.
   - **Konum saat diliminden türetilir** (`tzToLocation` in `src/lib/chat.ts`): IANA tz → şehir (son segment) + ülke (tablo/bölge). ip-api.com sadece tz yoksa yedek. Panel sağ tarafında tz + canlı yerel saat (`useLocalTime`) + dil gösterilir; sol listede şehir/ülke.
 - `Conversation` — `status` (OPEN/RESOLVED), `assignedUserId`, `operatorUnread`/`visitorUnread`, `lastMessageAt`.
-- `ChatMessage` — `sender` (VISITOR/OPERATOR), `userId` (operatör), `body`, `readAt` (görüldü).
+- `ChatMessage` — `sender` (VISITOR/OPERATOR), `userId` (operatör), `body`, `attachmentUrl`+`attachmentType` (resim eki, nullable), `readAt` (görüldü).
 - Silme yok: `Website` soft-delete (`deletedAt`).
 
 ### Realtime (`src/lib/chatBus.ts`)
@@ -39,6 +39,14 @@ Yardımcılar `src/lib/chat.ts`: `getClientIp`, `enrichVisitorGeo` (fire-and-for
 - **Site kullanıcı tanımlama:** `WebsiteMember` (soft-delete). Erişim kontrolü `src/lib/chat.ts` → `getAccessibleWebsiteIds`/`canAccessWebsite`/`isWebsiteOwner` (sahip VEYA atanmış üye). Üye atama /chat içindeki Siteler modalından (`MembersManager`, e-posta ile).
 - **Siteye göre kategorize:** inbox'ta site dropdown filtresi; konuşma listesinde renkli site rozeti + isim.
 - Sidebar'a "Canlı Destek" (`/chat`) ve "Web Siteleri" (`/websites`) linkleri; `/chat`'te sidebar varsayılan **kapalı** (geniş 3-pane).
+
+### Resim eki (güvenli)
+Hem ziyaretçi hem operatör mesaja **sadece resim** ekleyebilir. `src/lib/upload.ts`:
+- `sniffImage(buf)` türü **magic-byte**'tan belirler (PNG/JPEG/GIF/WebP). İstemcinin bildirdiği MIME/uzantı **hiç** kullanılmaz → spoof edilemez. **SVG kabul edilmez** (script gömülü XSS riski).
+- `saveImageUpload(file)` boyut (≤5MB, hem `file.size` hem gerçek buffer uzunluğu), tür doğrular; dosyayı `public/uploads/chat/<uuid>.<ext>` altına **rastgele adla** yazar (istemci adı kullanılmaz → path traversal yok).
+- Endpoint'ler: `POST /api/widget/upload` (public, ziyaretçi; rate-limit token 10/dk + IP 20/dk, mesaj route'unun konuşma mantığını taşır) ve `POST /api/chat/conversations/[id]/upload` (auth, operatör). İkisi de `ChatMessage`'a `attachmentUrl`+`attachmentType="image"` yazıp SSE ile yayınlar.
+- UI: widget & panel input barında ataç butonu (`accept="image/*"` raster), optimistic önizleme (objectURL), balonda tıklanabilir `<img>`; liste önizlemesinde "📷 Photo".
+- `.gitignore`: `public/uploads/*` (kullanıcı yüklemeleri commit edilmez, `.gitkeep` korunur).
 
 ### Güvenlik (public endpoint sertleştirme)
 `src/lib/rateLimit.ts` — süreç-içi sabit-pencere rate limiter (tek instance fork için yeterli) + `cap()` girdi kırpma. Uygulanan limitler: `session` 40/dk (IP), `message` 20/dk (token)+40/dk (IP), `ping` 120/dk (token); aşınca 429. Mesaj gövdesi `MAX_MESSAGE_LEN=4000`. Session/ping alanları (currentUrl 2048, referrer 2048, timezone 64, language 32, userAgent 512) kırpılır. XSS yok (React text render), SQLi yok (Prisma), auth cookie httpOnly+sameSite=lax+secure. Not: domain/origin allowlist yok — widget iframe kendi origin'imizden çalıştığı için Origin kontrolü uygulanabilir değil; kötüye kullanım rate-limit ile sınırlanır.

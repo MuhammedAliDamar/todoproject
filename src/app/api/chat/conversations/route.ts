@@ -53,7 +53,11 @@ export async function GET(req: NextRequest) {
           online: isOnline(c.visitor.lastSeenAt),
         },
         lastMessage: c.messages[0]
-          ? { body: c.messages[0].body, sender: c.messages[0].sender, createdAt: c.messages[0].createdAt }
+          ? {
+              body: c.messages[0].attachmentType === "image" ? "📷 Photo" : c.messages[0].body,
+              sender: c.messages[0].sender,
+              createdAt: c.messages[0].createdAt,
+            }
           : null,
       }))
     );

@@ -3,12 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { jsonResponse, errorResponse } from "@/lib/utils";
 import { publish, visitorTopic, websiteTopic } from "@/lib/chatBus";
 import { canAccessWebsite } from "@/lib/chat";
-import { MAX_MESSAGE_LEN } from "@/lib/rateLimit";
+import { saveImageUpload } from "@/lib/upload";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Operatör yanıtı. Body: { body } */
+/** Operatör resim eki gönderir (multipart/form-data: file). */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -20,12 +20,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     });
     if (!conv || !(await canAccessWebsite(conv.websiteId, userId))) return errorResponse("Not found", 404);
 
-    const { body } = await req.json();
-    if (!body?.trim()) return errorResponse("Empty message", 400);
-    if (body.length > MAX_MESSAGE_LEN) return errorResponse("Message too long", 400);
+    const form = await req.formData();
+    const file = form.get("file");
+    if (!(file instanceof File)) return errorResponse("Invalid payload", 400);
+
+    const saved = await saveImageUpload(file);
+    if ("error" in saved) return errorResponse(saved.error, 400);
 
     const message = await prisma.chatMessage.create({
-      data: { conversationId: id, sender: "OPERATOR", userId, body: body.trim() },
+      data: {
+        conversationId: id,
+        sender: "OPERATOR",
+        userId,
+        body: "",
+        attachmentUrl: saved.url,
+        attachmentType: "image",
+      },
       include: { user: { select: { id: true, name: true, avatar: true } } },
     });
 
@@ -50,20 +60,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       createdAt: message.createdAt,
       readAt: message.readAt,
     };
-    // Operatör paneli: gerçek operatör adı/avatarı
     const operatorPayload = {
       ...base,
       operator: message.user ? { name: message.user.name, avatar: message.user.avatar } : null,
     };
-    // Ziyaretçi widget'ı: gerçek isim gizli, site ayarındaki isim (ör. "Support")
-    const visitorPayload = {
-      ...base,
-      operator: { name: conv.website.operatorName, avatar: null },
-    };
+    const visitorPayload = { ...base, operator: { name: conv.website.operatorName, avatar: null } };
 
-    // Ziyaretçinin widget'ına ilet (isim gizli)
     publish(visitorTopic(conv.visitorId), { type: "message", conversationId: id, message: visitorPayload });
-    // Panelin diğer sekmelerine ilet (gerçek isim)
     publish(websiteTopic(conv.websiteId), { type: "message", conversationId: id, message: operatorPayload });
 
     return jsonResponse({ message: operatorPayload }, 201);

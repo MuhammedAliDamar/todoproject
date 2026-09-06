@@ -295,6 +295,8 @@ model ChatMessage {
   sender         ChatSender
   userId         String?      // operatör mesajıysa gönderen kullanıcı
   body           String
+  attachmentUrl  String?      // yüklenen resmin URL'i (varsa)
+  attachmentType String?      // "image" (şimdilik sadece resim)
   readAt         DateTime?    // karşı tarafça okunma zamanı
   createdAt      DateTime     @default(now())
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)

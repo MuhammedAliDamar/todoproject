@@ -25,6 +25,8 @@ interface Msg {
   id: string;
   sender: "VISITOR" | "OPERATOR";
   body: string;
+  attachmentUrl?: string | null;
+  attachmentType?: string | null;
   createdAt: string;
   readAt?: string | null;
   operator?: { name: string; avatar: string | null } | null;
@@ -88,6 +90,8 @@ export default function ChatPage() {
   const [siteFilter, setSiteFilter] = useState("");
   const [muted, setMuted] = useState(false);
 
+  const [uploadErr, setUploadErr] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const selectedRef = useRef<string | null>(null);
   selectedRef.current = selectedId;
@@ -211,7 +215,7 @@ export default function ChatPage() {
           }
           const updated: ConvItem = {
             ...found,
-            lastMessage: { body: m.body, sender: m.sender, createdAt: m.createdAt },
+            lastMessage: { body: m.attachmentType === "image" ? "📷 Photo" : m.body, sender: m.sender, createdAt: m.createdAt },
             lastMessageAt: m.createdAt,
             operatorUnread:
               m.sender === "VISITOR" && cid !== cur ? found.operatorUnread + 1 : found.operatorUnread,
@@ -267,6 +271,39 @@ export default function ChatPage() {
       setDetail((d) =>
         d ? { ...d, messages: d.messages.map((m) => (m.id === tempId ? data.message : m)) } : d
       );
+    }
+  };
+
+  const onPickImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f || !selectedId) return;
+    setUploadErr(null);
+    if (!f.type.startsWith("image/")) {
+      setUploadErr("Only image files are allowed");
+      return;
+    }
+    if (f.size > 5 * 1024 * 1024) {
+      setUploadErr("Image cannot exceed 5MB");
+      return;
+    }
+    const tempId = "tmp-" + Date.now();
+    const preview = URL.createObjectURL(f);
+    setDetail((d) =>
+      d
+        ? { ...d, messages: [...d.messages, { id: tempId, sender: "OPERATOR", body: "", attachmentUrl: preview, attachmentType: "image", createdAt: new Date().toISOString(), pending: true }] }
+        : d
+    );
+    const fd = new FormData();
+    fd.append("file", f);
+    const res = await fetch(`/api/chat/conversations/${selectedId}/upload`, { method: "POST", body: fd });
+    if (res.ok) {
+      const data = await res.json();
+      setDetail((d) => (d ? { ...d, messages: d.messages.map((m) => (m.id === tempId ? data.message : m)) } : d));
+    } else {
+      const dd = await res.json().catch(() => ({}));
+      setUploadErr(dd.error || "Upload failed");
+      setDetail((d) => (d ? { ...d, messages: d.messages.filter((m) => m.id !== tempId) } : d));
     }
   };
 
@@ -432,7 +469,24 @@ export default function ChatPage() {
               <div ref={bottomRef} />
             </div>
 
+            {uploadErr && <div className="px-3 pt-2 text-xs text-red-500">{uploadErr}</div>}
             <div className="p-3 border-t border-[var(--asana-border)] bg-[var(--asana-bg-white)] flex gap-2 items-end">
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/png,image/jpeg,image/gif,image/webp"
+                onChange={onPickImage}
+                className="hidden"
+              />
+              <button
+                onClick={() => fileRef.current?.click()}
+                title="Attach image"
+                className="p-2 rounded-lg text-[var(--asana-text-secondary)] hover:bg-[var(--asana-bg)] shrink-0"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                </svg>
+              </button>
               <textarea
                 value={input}
                 onChange={(e) => onType(e.target.value)}
@@ -487,19 +541,40 @@ export default function ChatPage() {
 
 function MsgBubble({ m, color }: { m: Msg; color: string }) {
   const op = m.sender === "OPERATOR";
+  const isImage = m.attachmentType === "image" && m.attachmentUrl;
+  const hasText = m.body.trim().length > 0;
   return (
     <div className={`flex flex-col ${op ? "items-end" : "items-start"}`}>
       {op && m.operator?.name && <span className="text-[10px] text-[var(--asana-text-secondary)] mb-0.5 mr-1">{m.operator.name}</span>}
-      <div
-        className="max-w-[75%] px-3 py-2 rounded-2xl text-sm whitespace-pre-wrap break-words"
-        style={
-          op
-            ? { background: color, color: "#fff", borderBottomRightRadius: 4, opacity: m.pending ? 0.6 : 1 }
-            : { background: "var(--asana-bg-white)", color: "var(--asana-text)", border: "1px solid var(--asana-border)", borderBottomLeftRadius: 4 }
-        }
-      >
-        {m.body}
-      </div>
+      {isImage && (
+        <a
+          href={m.attachmentUrl!}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block mb-1"
+          style={{ opacity: m.pending ? 0.6 : 1 }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={m.attachmentUrl!}
+            alt="attachment"
+            className="rounded-xl object-cover"
+            style={{ maxWidth: 240, maxHeight: 260 }}
+          />
+        </a>
+      )}
+      {hasText && (
+        <div
+          className="max-w-[75%] px-3 py-2 rounded-2xl text-sm whitespace-pre-wrap break-words"
+          style={
+            op
+              ? { background: color, color: "#fff", borderBottomRightRadius: 4, opacity: m.pending ? 0.6 : 1 }
+              : { background: "var(--asana-bg-white)", color: "var(--asana-text)", border: "1px solid var(--asana-border)", borderBottomLeftRadius: 4 }
+          }
+        >
+          {m.body}
+        </div>
+      )}
       {op && m.readAt && <span className="text-[10px] text-[var(--asana-text-secondary)] mt-0.5 mr-1">Seen</span>}
     </div>
   );
