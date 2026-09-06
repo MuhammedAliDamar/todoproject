@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { playPing, unlockAudio } from "@/lib/notifySound";
 
 type Sender = "VISITOR" | "OPERATOR";
 interface Msg {
@@ -134,6 +135,7 @@ function WidgetInner() {
         });
         if (m.sender === "OPERATOR") {
           setOperatorTyping(false);
+          playPing(); // operatör yanıtında ziyaretçiye sesli bildirim
           if (!openRef.current) setUnread((u) => u + 1);
           else markRead();
         }
@@ -179,7 +181,10 @@ function WidgetInner() {
   const toggle = (next: boolean) => {
     setOpen(next);
     parentPost({ type: "marktasks:size", open: next });
-    if (next) markRead();
+    if (next) {
+      unlockAudio(); // ziyaretçi etkileşimi → ses çalınabilir hale gelir
+      markRead();
+    }
   };
 
   // Parent'tan open/close komutları ($marktasks.open())

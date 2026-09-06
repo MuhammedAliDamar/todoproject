@@ -82,16 +82,19 @@ export async function POST(req: NextRequest) {
     // Ülke/şehir yoksa arka planda doldur
     if (!visitor.country) enrichVisitorGeo(visitor.id, ip);
 
-    // En güncel konuşma (varsa) + geçmiş
+    // En güncel konuşma (durum/id için)
     const conversation = await prisma.conversation.findFirst({
       where: { visitorId: visitor.id },
       orderBy: { lastMessageAt: "desc" },
-      include: {
-        messages: {
-          orderBy: { createdAt: "asc" },
-          include: { user: { select: { id: true, name: true, avatar: true } } },
-        },
-      },
+      select: { id: true, status: true },
+    });
+
+    // Ziyaretçinin TÜM konuşmalarındaki mesajlar (kapatıp yeni oturumda açınca
+    // geçmiş kaybolmasın — sürekli tek bir sohbet gibi görünür)
+    const history = await prisma.chatMessage.findMany({
+      where: { conversation: { visitorId: visitor.id } },
+      orderBy: { createdAt: "asc" },
+      include: { user: { select: { id: true } } },
     });
 
     // Operatörün paneline ziyaretçi güncellemesini bildir
@@ -112,7 +115,7 @@ export async function POST(req: NextRequest) {
       conversation: conversation
         ? { id: conversation.id, status: conversation.status }
         : null,
-      messages: (conversation?.messages ?? []).map((m) => ({
+      messages: history.map((m) => ({
         id: m.id,
         sender: m.sender,
         body: m.body,

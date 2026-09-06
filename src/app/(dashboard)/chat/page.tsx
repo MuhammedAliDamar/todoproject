@@ -1,47 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-
-/* ── iPhone-benzeri bildirim sesi (Web Audio, dosyasız) ── */
-let _audioCtx: AudioContext | null = null;
-let _lastPing = 0;
-function ensureAudio() {
-  if (typeof window === "undefined") return null;
-  try {
-    const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    _audioCtx = _audioCtx || new AC();
-    if (_audioCtx.state === "suspended") _audioCtx.resume();
-    return _audioCtx;
-  } catch {
-    return null;
-  }
-}
-function playPing() {
-  const ctx = ensureAudio();
-  if (!ctx) return;
-  const now = Date.now();
-  if (now - _lastPing < 700) return; // çok sık çalmasın
-  _lastPing = now;
-  const t0 = ctx.currentTime;
-  // İki kısa marimba notası (D6 → G6) — iPhone bildirimine yakın, hoş bir tri-tone
-  const notes = [
-    { f: 1174.66, t: 0.0 },
-    { f: 1567.98, t: 0.13 },
-  ];
-  for (const { f, t } of notes) {
-    const osc = ctx.createOscillator();
-    const g = ctx.createGain();
-    osc.type = "sine";
-    osc.frequency.value = f;
-    const start = t0 + t;
-    g.gain.setValueAtTime(0.0001, start);
-    g.gain.exponentialRampToValueAtTime(0.32, start + 0.012);
-    g.gain.exponentialRampToValueAtTime(0.0001, start + 0.35);
-    osc.connect(g).connect(ctx.destination);
-    osc.start(start);
-    osc.stop(start + 0.4);
-  }
-}
+import { playPing, unlockAudio } from "@/lib/notifySound";
 
 type Status = "OPEN" | "RESOLVED";
 interface ConvItem {
@@ -139,7 +99,7 @@ export default function ChatPage() {
   // Ses tercihini yükle + tarayıcı ses kilidini ilk tıklamada aç
   useEffect(() => {
     setMuted(localStorage.getItem("mt_chat_muted") === "1");
-    const unlock = () => ensureAudio();
+    const unlock = () => unlockAudio();
     window.addEventListener("click", unlock, { once: true });
     return () => window.removeEventListener("click", unlock);
   }, []);
@@ -147,7 +107,7 @@ export default function ChatPage() {
     setMuted((m) => {
       const next = !m;
       localStorage.setItem("mt_chat_muted", next ? "1" : "0");
-      if (!next) ensureAudio(); // sesi açarken kilidi de aç
+      if (!next) unlockAudio(); // sesi açarken kilidi de aç
       return next;
     });
   };
