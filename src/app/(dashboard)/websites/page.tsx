@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import MembersManager from "@/components/chat/MembersManager";
 
 interface Website {
   id: string;
@@ -12,6 +13,7 @@ interface Website {
   operatorName: string;
   position: string;
   active: boolean;
+  isOwner?: boolean;
   _count?: { conversations: number; visitors: number };
 }
 
@@ -171,6 +173,8 @@ function WebsiteCard({ site, onChange, onEdit }: { site: Website; onChange: () =
           {copied ? "Copied ✓" : "Copy"}
         </button>
       </div>
+
+      {site.isOwner !== false && <MembersManager websiteId={site.id} />}
     </div>
   );
 }
@@ -233,6 +237,11 @@ function EditModal({ site, onClose, onSaved }: { site: Website; onClose: () => v
               </label>
             </Field>
           </div>
+          {site.isOwner !== false && (
+            <div className="pt-3 mt-1 border-t border-[var(--asana-border)]">
+              <MembersManager websiteId={site.id} embedded />
+            </div>
+          )}
         </div>
         <div className="flex justify-end gap-2 mt-5">
           <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-[var(--asana-text-secondary)] hover:bg-[var(--asana-bg)]">
