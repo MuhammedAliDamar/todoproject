@@ -22,7 +22,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const userId = req.headers.get("x-user-id")!;
     const conv = await loadOwned(id, userId);
-    if (!conv) return errorResponse("Bulunamadı", 404);
+    if (!conv) return errorResponse("Not found", 404);
 
     const full = await prisma.conversation.findUnique({
       where: { id },
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         },
       },
     });
-    if (!full) return errorResponse("Bulunamadı", 404);
+    if (!full) return errorResponse("Not found", 404);
 
     return jsonResponse({
       id: full.id,
@@ -64,7 +64,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const { id } = await params;
     const userId = req.headers.get("x-user-id")!;
     const conv = await loadOwned(id, userId);
-    if (!conv) return errorResponse("Bulunamadı", 404);
+    if (!conv) return errorResponse("Not found", 404);
 
     const b = await req.json();
     const data: Record<string, unknown> = {};

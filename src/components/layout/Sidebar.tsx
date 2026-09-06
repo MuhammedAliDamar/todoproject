@@ -184,7 +184,7 @@ export default function Sidebar() {
               ? "bg-[var(--asana-sidebar-active)] text-[var(--asana-sidebar-text-active)]"
               : "text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)]"
           }`}
-          title="Canlı Destek"
+          title="Live Chat"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4-.8L3 20l1.3-3.9A7.96 7.96 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -197,7 +197,7 @@ export default function Sidebar() {
               ? "bg-[var(--asana-sidebar-active)] text-[var(--asana-sidebar-text-active)]"
               : "text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)]"
           }`}
-          title="Web Siteleri"
+          title="Websites"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z M3.6 9h16.8 M3.6 15h16.8 M12 3a15 15 0 010 18 15 15 0 010-18z" />
@@ -284,7 +284,7 @@ export default function Sidebar() {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4-.8L3 20l1.3-3.9A7.96 7.96 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
-            Canlı Destek
+            Live Chat
           </Link>
 
           <Link
@@ -298,7 +298,7 @@ export default function Sidebar() {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z M3.6 9h16.8 M3.6 15h16.8 M12 3a15 15 0 010 18 15 15 0 010-18z" />
             </svg>
-            Web Siteleri
+            Websites
           </Link>
         </nav>
       </div>

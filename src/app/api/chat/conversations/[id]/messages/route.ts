@@ -16,13 +16,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const conv = await prisma.conversation.findUnique({
       where: { id },
-      include: { website: { select: { userId: true } } },
+      include: { website: { select: { userId: true, operatorName: true } } },
     });
-    if (!conv || !(await canAccessWebsite(conv.websiteId, userId))) return errorResponse("Bulunamadı", 404);
+    if (!conv || !(await canAccessWebsite(conv.websiteId, userId))) return errorResponse("Not found", 404);
 
     const { body } = await req.json();
-    if (!body?.trim()) return errorResponse("Boş mesaj", 400);
-    if (body.length > MAX_MESSAGE_LEN) return errorResponse("Mesaj çok uzun", 400);
+    if (!body?.trim()) return errorResponse("Empty message", 400);
+    if (body.length > MAX_MESSAGE_LEN) return errorResponse("Message too long", 400);
 
     const message = await prisma.chatMessage.create({
       data: { conversationId: id, sender: "OPERATOR", userId, body: body.trim() },
@@ -40,22 +40,31 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       },
     });
 
-    const payload = {
+    const base = {
       id: message.id,
       conversationId: id,
       sender: message.sender,
       body: message.body,
       createdAt: message.createdAt,
       readAt: message.readAt,
+    };
+    // Operatör paneli: gerçek operatör adı/avatarı
+    const operatorPayload = {
+      ...base,
       operator: message.user ? { name: message.user.name, avatar: message.user.avatar } : null,
     };
+    // Ziyaretçi widget'ı: gerçek isim gizli, site ayarındaki isim (ör. "Support")
+    const visitorPayload = {
+      ...base,
+      operator: { name: conv.website.operatorName, avatar: null },
+    };
 
-    // Ziyaretçinin widget'ına ilet
-    publish(visitorTopic(conv.visitorId), { type: "message", conversationId: id, message: payload });
-    // Panelin diğer sekmelerine ilet
-    publish(websiteTopic(conv.websiteId), { type: "message", conversationId: id, message: payload });
+    // Ziyaretçinin widget'ına ilet (isim gizli)
+    publish(visitorTopic(conv.visitorId), { type: "message", conversationId: id, message: visitorPayload });
+    // Panelin diğer sekmelerine ilet (gerçek isim)
+    publish(websiteTopic(conv.websiteId), { type: "message", conversationId: id, message: operatorPayload });
 
-    return jsonResponse({ message: payload }, 201);
+    return jsonResponse({ message: operatorPayload }, 201);
   } catch {
     return errorResponse("Server error", 500);
   }

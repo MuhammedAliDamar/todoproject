@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   try {
     const userId = req.headers.get("x-user-id")!;
     const { name, domain, color, welcomeMessage, operatorName, position } = await req.json();
-    if (!name?.trim()) return errorResponse("Site adı gerekli", 400);
+    if (!name?.trim()) return errorResponse("Site name is required", 400);
 
     const website = await prisma.website.create({
       data: {

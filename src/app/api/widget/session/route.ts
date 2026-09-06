@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     const ip = getClientIp(req);
     // Rate limit: IP başına 40/dk (yeni ziyaretçi/oturum flood'u)
     if (!rateLimit(`wsess:${ip || "unknown"}`, 40, 60_000)) {
-      return errorResponse("Çok fazla istek, lütfen bekleyin", 429);
+      return errorResponse("Too many requests, please wait", 429);
     }
 
     // Girdileri güvenli üst sınırlara kırp
@@ -118,7 +118,8 @@ export async function POST(req: NextRequest) {
         body: m.body,
         createdAt: m.createdAt,
         readAt: m.readAt,
-        operator: m.user ? { name: m.user.name, avatar: m.user.avatar } : null,
+        // Ziyaretçiye operatörün gerçek adı gösterilmez; site ayarındaki isim (ör. "Support")
+        operator: m.user ? { name: website.operatorName, avatar: null } : null,
       })),
     });
   } catch {

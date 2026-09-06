@@ -14,7 +14,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const userId = req.headers.get("x-user-id")!;
     const website = await owns(id, userId);
-    if (!website) return errorResponse("Bulunamadı", 404);
+    if (!website) return errorResponse("Not found", 404);
     return jsonResponse(website);
   } catch {
     return errorResponse("Server error", 500);
@@ -26,7 +26,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const { id } = await params;
     const userId = req.headers.get("x-user-id")!;
     const website = await owns(id, userId);
-    if (!website) return errorResponse("Bulunamadı", 404);
+    if (!website) return errorResponse("Not found", 404);
 
     const b = await req.json();
     const data: Record<string, unknown> = {};
@@ -56,7 +56,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const { id } = await params;
     const userId = req.headers.get("x-user-id")!;
     const website = await owns(id, userId);
-    if (!website) return errorResponse("Bulunamadı", 404);
+    if (!website) return errorResponse("Not found", 404);
     // Kalıcı silme yok — soft delete (kayıtları koru)
     await prisma.website.update({ where: { id }, data: { deletedAt: new Date(), active: false } });
     return jsonResponse({ ok: true });

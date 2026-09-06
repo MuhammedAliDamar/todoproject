@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
     // Rate limit: token başına 120/dk (heartbeat 30s + typing 2s throttle + read)
     if (!rateLimit(`wping:${token}`, 120, 60_000)) {
-      return errorResponse("Çok fazla istek", 429);
+      return errorResponse("Too many requests", 429);
     }
 
     const currentUrl = cap(raw.currentUrl, 2048);
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
         type: "typing",
         conversationId: conversation.id,
         from: "visitor",
-        name: visitor.name || "Ziyaretçi",
+        name: visitor.name || "Visitor",
       });
     }
 

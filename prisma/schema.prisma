@@ -207,8 +207,8 @@ model Website {
   publicKey       String         @unique @default(cuid())
   // Widget görünüm ayarları
   color           String         @default("#1e88e5")
-  welcomeMessage  String         @default("Merhaba! Size nasıl yardımcı olabiliriz?")
-  operatorName    String         @default("Destek")
+  welcomeMessage  String         @default("Hi! How can we help you?")
+  operatorName    String         @default("Support")
   position        String         @default("right") // right | left
   active          Boolean        @default(true)
   userId          String

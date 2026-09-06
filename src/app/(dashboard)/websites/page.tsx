@@ -51,28 +51,28 @@ export default function WebsitesPage() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold text-[var(--asana-text)] mb-1">Web Siteleri</h1>
+      <h1 className="text-2xl font-bold text-[var(--asana-text)] mb-1">Websites</h1>
       <p className="text-sm text-[var(--asana-text-secondary)] mb-6">
-        Her site için bir chat kutusu oluşturun ve embed kodunu sitenize ekleyin.
+        Create a chat box for each site and add the embed code to your website.
       </p>
 
-      {/* Oluştur */}
+      {/* Create */}
       <div className="bg-[var(--asana-bg-white)] border border-[var(--asana-border)] rounded-xl p-4 mb-6 flex gap-2 flex-wrap items-end">
         <div className="flex-1 min-w-[160px]">
-          <label className="block text-xs font-medium text-[var(--asana-text-secondary)] mb-1">Site adı</label>
+          <label className="block text-xs font-medium text-[var(--asana-text-secondary)] mb-1">Site name</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Örn. Şirket Sitesi"
+            placeholder="e.g. Company Site"
             className="w-full px-3 py-2 rounded-lg border border-[var(--asana-border)] bg-transparent text-[var(--asana-text)] text-sm outline-none focus:border-[var(--asana-accent)]"
           />
         </div>
         <div className="flex-1 min-w-[160px]">
-          <label className="block text-xs font-medium text-[var(--asana-text-secondary)] mb-1">Alan adı (opsiyonel)</label>
+          <label className="block text-xs font-medium text-[var(--asana-text-secondary)] mb-1">Domain (optional)</label>
           <input
             value={domain}
             onChange={(e) => setDomain(e.target.value)}
-            placeholder="ornek.com"
+            placeholder="example.com"
             className="w-full px-3 py-2 rounded-lg border border-[var(--asana-border)] bg-transparent text-[var(--asana-text)] text-sm outline-none focus:border-[var(--asana-accent)]"
           />
         </div>
@@ -81,14 +81,14 @@ export default function WebsitesPage() {
           disabled={creating || !name.trim()}
           className="px-4 py-2 rounded-lg bg-[var(--asana-accent)] hover:bg-[var(--asana-accent-hover)] text-white text-sm font-medium disabled:opacity-50"
         >
-          {creating ? "Ekleniyor…" : "Site Ekle"}
+          {creating ? "Adding…" : "Add Site"}
         </button>
       </div>
 
       {loading ? (
-        <p className="text-sm text-[var(--asana-text-secondary)]">Yükleniyor…</p>
+        <p className="text-sm text-[var(--asana-text-secondary)]">Loading…</p>
       ) : sites.length === 0 ? (
-        <p className="text-sm text-[var(--asana-text-secondary)]">Henüz site yok. Yukarıdan ekleyin.</p>
+        <p className="text-sm text-[var(--asana-text-secondary)]">No sites yet. Add one above.</p>
       ) : (
         <div className="space-y-4">
           {sites.map((s) => (
@@ -125,7 +125,7 @@ function WebsiteCard({ site, onChange, onEdit }: { site: Website; onChange: () =
   };
 
   const regenerate = async () => {
-    if (!confirm("Yeni anahtar üretilsin mi? Eski embed kodu çalışmayı durdurur.")) return;
+    if (!confirm("Generate a new key? The old embed code will stop working.")) return;
     await fetch(`/api/chat/websites/${site.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -135,7 +135,7 @@ function WebsiteCard({ site, onChange, onEdit }: { site: Website; onChange: () =
   };
 
   const remove = async () => {
-    if (!confirm("Bu site arşivlensin mi? (Kayıtlar korunur, widget devre dışı kalır)")) return;
+    if (!confirm("Archive this site? (Records are kept, the widget is disabled.)")) return;
     await fetch(`/api/chat/websites/${site.id}`, { method: "DELETE" });
     onChange();
   };
@@ -148,17 +148,17 @@ function WebsiteCard({ site, onChange, onEdit }: { site: Website; onChange: () =
           <div>
             <div className="font-semibold text-[var(--asana-text)] flex items-center gap-2">
               {site.name}
-              {!site.active && <span className="text-xs text-amber-600">(pasif)</span>}
+              {!site.active && <span className="text-xs text-amber-600">(inactive)</span>}
             </div>
             <div className="text-xs text-[var(--asana-text-secondary)]">{site.domain || "—"}</div>
           </div>
         </div>
         <div className="flex items-center gap-4 text-xs text-[var(--asana-text-secondary)]">
-          <span>{site._count?.conversations ?? 0} açık</span>
-          <span>{site._count?.visitors ?? 0} ziyaretçi</span>
-          <button onClick={onEdit} className="text-[var(--asana-blue)] hover:underline">Ayarlar</button>
-          <button onClick={regenerate} className="hover:underline">Anahtar yenile</button>
-          <button onClick={remove} className="text-red-500 hover:underline">Arşivle</button>
+          <span>{site._count?.conversations ?? 0} open</span>
+          <span>{site._count?.visitors ?? 0} visitors</span>
+          <button onClick={onEdit} className="text-[var(--asana-blue)] hover:underline">Settings</button>
+          <button onClick={regenerate} className="hover:underline">Regenerate key</button>
+          <button onClick={remove} className="text-red-500 hover:underline">Archive</button>
         </div>
       </div>
 
@@ -168,7 +168,7 @@ function WebsiteCard({ site, onChange, onEdit }: { site: Website; onChange: () =
           onClick={copy}
           className="absolute top-2 right-2 px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-xs"
         >
-          {copied ? "Kopyalandı ✓" : "Kopyala"}
+          {copied ? "Copied ✓" : "Copy"}
         </button>
       </div>
     </div>
@@ -205,41 +205,41 @@ function EditModal({ site, onClose, onSaved }: { site: Website; onClose: () => v
         className="bg-[var(--asana-bg-white)] rounded-xl p-5 w-full max-w-md"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-bold text-[var(--asana-text)] mb-4">Widget Ayarları</h2>
+        <h2 className="text-lg font-bold text-[var(--asana-text)] mb-4">Widget Settings</h2>
         <div className="space-y-3">
-          <Field label="Site adı">
+          <Field label="Site name">
             <input value={form.name} onChange={(e) => set("name", e.target.value)} className={inp} />
           </Field>
-          <Field label="Operatör adı">
+          <Field label="Operator name">
             <input value={form.operatorName} onChange={(e) => set("operatorName", e.target.value)} className={inp} />
           </Field>
-          <Field label="Karşılama mesajı">
+          <Field label="Welcome message">
             <textarea value={form.welcomeMessage} onChange={(e) => set("welcomeMessage", e.target.value)} rows={2} className={inp} />
           </Field>
           <div className="flex gap-3">
-            <Field label="Renk">
+            <Field label="Color">
               <input type="color" value={form.color} onChange={(e) => set("color", e.target.value)} className="w-14 h-9 rounded border border-[var(--asana-border)] bg-transparent" />
             </Field>
-            <Field label="Konum">
+            <Field label="Position">
               <select value={form.position} onChange={(e) => set("position", e.target.value)} className={inp}>
-                <option value="right">Sağ alt</option>
-                <option value="left">Sol alt</option>
+                <option value="right">Bottom right</option>
+                <option value="left">Bottom left</option>
               </select>
             </Field>
-            <Field label="Durum">
+            <Field label="Status">
               <label className="flex items-center gap-2 text-sm text-[var(--asana-text)] mt-2">
                 <input type="checkbox" checked={form.active} onChange={(e) => set("active", e.target.checked)} />
-                Aktif
+                Active
               </label>
             </Field>
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-5">
           <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-[var(--asana-text-secondary)] hover:bg-[var(--asana-bg)]">
-            İptal
+            Cancel
           </button>
           <button onClick={save} disabled={saving} className="px-4 py-2 rounded-lg bg-[var(--asana-accent)] hover:bg-[var(--asana-accent-hover)] text-white text-sm font-medium disabled:opacity-50">
-            {saving ? "Kaydediliyor…" : "Kaydet"}
+            {saving ? "Saving…" : "Save"}
           </button>
         </div>
       </div>

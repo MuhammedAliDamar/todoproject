@@ -36,7 +36,7 @@
 
   var iframe = document.createElement("iframe");
   iframe.id = "marktasks-chat";
-  iframe.title = "Canlı Destek";
+  iframe.title = "Live Chat";
   iframe.allowTransparency = "true";
   iframe.src = ORIGIN + "/widget?key=" + encodeURIComponent(websiteId);
   iframe.style.cssText = [

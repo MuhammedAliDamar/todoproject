@@ -16,7 +16,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       where: { id },
       include: { website: { select: { userId: true } } },
     });
-    if (!conv || !(await canAccessWebsite(conv.websiteId, userId))) return errorResponse("Bulunamadı", 404);
+    if (!conv || !(await canAccessWebsite(conv.websiteId, userId))) return errorResponse("Not found", 404);
 
     publish(visitorTopic(conv.visitorId), { type: "typing", conversationId: id, from: "operator" });
     return jsonResponse({ ok: true });

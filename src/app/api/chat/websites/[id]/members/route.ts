@@ -10,7 +10,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const { id } = await params;
     const userId = req.headers.get("x-user-id")!;
-    if (!(await isWebsiteOwner(id, userId))) return errorResponse("Yetki yok", 403);
+    if (!(await isWebsiteOwner(id, userId))) return errorResponse("No permission", 403);
 
     const website = await prisma.website.findUnique({
       where: { id },
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         },
       },
     });
-    if (!website) return errorResponse("Bulunamadı", 404);
+    if (!website) return errorResponse("Not found", 404);
 
     return jsonResponse({
       owner: { ...website.user, role: "owner" },
@@ -39,19 +39,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const { id } = await params;
     const userId = req.headers.get("x-user-id")!;
-    if (!(await isWebsiteOwner(id, userId))) return errorResponse("Yetki yok", 403);
+    if (!(await isWebsiteOwner(id, userId))) return errorResponse("No permission", 403);
 
     const { email } = await req.json();
-    if (!email?.trim()) return errorResponse("E-posta gerekli", 400);
+    if (!email?.trim()) return errorResponse("Email required", 400);
 
     const target = await prisma.user.findUnique({
       where: { email: email.trim().toLowerCase() },
       select: { id: true, name: true, email: true, avatar: true },
     });
-    if (!target) return errorResponse("Bu e-postayla kayıtlı kullanıcı yok", 404);
+    if (!target) return errorResponse("No user registered with this email", 404);
 
     const website = await prisma.website.findUnique({ where: { id }, select: { userId: true } });
-    if (website?.userId === target.id) return errorResponse("Zaten site sahibi", 400);
+    if (website?.userId === target.id) return errorResponse("Already the site owner", 400);
 
     // Soft-delete edilmiş kayıt varsa geri aç, yoksa oluştur (upsert — silme yok)
     const existing = await prisma.websiteMember.findUnique({
@@ -77,10 +77,10 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   try {
     const { id } = await params;
     const userId = req.headers.get("x-user-id")!;
-    if (!(await isWebsiteOwner(id, userId))) return errorResponse("Yetki yok", 403);
+    if (!(await isWebsiteOwner(id, userId))) return errorResponse("No permission", 403);
 
     const { userId: targetId } = await req.json();
-    if (!targetId) return errorResponse("userId gerekli", 400);
+    if (!targetId) return errorResponse("userId required", 400);
 
     const member = await prisma.websiteMember.findUnique({
       where: { websiteId_userId: { websiteId: id, userId: targetId } },

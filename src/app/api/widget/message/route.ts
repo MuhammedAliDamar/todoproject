@@ -18,12 +18,12 @@ export async function POST(req: NextRequest) {
     if (!publicKey || !token || !body?.trim()) return errorResponse("Invalid payload", 400);
 
     // Uzunluk sınırı (DoS/dev boyutlu mesaj)
-    if (body.length > MAX_MESSAGE_LEN) return errorResponse("Mesaj çok uzun", 400);
+    if (body.length > MAX_MESSAGE_LEN) return errorResponse("Message too long", 400);
 
     // Rate limit: ziyaretçi başına 20/dk, IP başına 40/dk
     const ip = getClientIp(req) || "unknown";
     if (!rateLimit(`wmsg:${token}`, 20, 60_000) || !rateLimit(`wmsgip:${ip}`, 40, 60_000)) {
-      return errorResponse("Çok fazla istek, lütfen bekleyin", 429);
+      return errorResponse("Too many requests, please wait", 429);
     }
 
     const website = await prisma.website.findFirst({

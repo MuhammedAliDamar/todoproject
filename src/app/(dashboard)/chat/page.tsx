@@ -2,6 +2,47 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+/* ── iPhone-benzeri bildirim sesi (Web Audio, dosyasız) ── */
+let _audioCtx: AudioContext | null = null;
+let _lastPing = 0;
+function ensureAudio() {
+  if (typeof window === "undefined") return null;
+  try {
+    const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    _audioCtx = _audioCtx || new AC();
+    if (_audioCtx.state === "suspended") _audioCtx.resume();
+    return _audioCtx;
+  } catch {
+    return null;
+  }
+}
+function playPing() {
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  const now = Date.now();
+  if (now - _lastPing < 700) return; // çok sık çalmasın
+  _lastPing = now;
+  const t0 = ctx.currentTime;
+  // İki kısa marimba notası (D6 → G6) — iPhone bildirimine yakın, hoş bir tri-tone
+  const notes = [
+    { f: 1174.66, t: 0.0 },
+    { f: 1567.98, t: 0.13 },
+  ];
+  for (const { f, t } of notes) {
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = f;
+    const start = t0 + t;
+    g.gain.setValueAtTime(0.0001, start);
+    g.gain.exponentialRampToValueAtTime(0.32, start + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, start + 0.35);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(start);
+    osc.stop(start + 0.4);
+  }
+}
+
 type Status = "OPEN" | "RESOLVED";
 interface ConvItem {
   id: string;
@@ -53,7 +94,7 @@ function useLocalTime(tz: string | null | undefined) {
     const tick = () => {
       try {
         setNow(
-          new Intl.DateTimeFormat("tr-TR", { timeZone: tz, hour: "2-digit", minute: "2-digit" }).format(new Date())
+          new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit" }).format(new Date())
         );
       } catch {
         setNow(null);
@@ -68,10 +109,10 @@ function useLocalTime(tz: string | null | undefined) {
 
 function initials(name: string | null, id: string) {
   if (name) return name.charAt(0).toUpperCase();
-  return "Z" + id.slice(-2, -1).toUpperCase();
+  return "V" + id.slice(-2, -1).toUpperCase();
 }
 function visitorLabel(v: ConvItem["visitor"]) {
-  return v.name || v.email || "Ziyaretçi #" + v.id.slice(-5);
+  return v.name || v.email || "Visitor #" + v.id.slice(-5);
 }
 
 export default function ChatPage() {
@@ -85,12 +126,31 @@ export default function ChatPage() {
   const [showSites, setShowSites] = useState(false);
   const [websites, setWebsites] = useState<{ id: string; name: string; color: string; isOwner: boolean }[]>([]);
   const [siteFilter, setSiteFilter] = useState("");
+  const [muted, setMuted] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const selectedRef = useRef<string | null>(null);
   selectedRef.current = selectedId;
   const typingClear = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTyping = useRef(0);
+  const mutedRef = useRef(false);
+  mutedRef.current = muted;
+
+  // Ses tercihini yükle + tarayıcı ses kilidini ilk tıklamada aç
+  useEffect(() => {
+    setMuted(localStorage.getItem("mt_chat_muted") === "1");
+    const unlock = () => ensureAudio();
+    window.addEventListener("click", unlock, { once: true });
+    return () => window.removeEventListener("click", unlock);
+  }, []);
+  const toggleMute = () => {
+    setMuted((m) => {
+      const next = !m;
+      localStorage.setItem("mt_chat_muted", next ? "1" : "0");
+      if (!next) ensureAudio(); // sesi açarken kilidi de aç
+      return next;
+    });
+  };
 
   const localTime = useLocalTime(detail?.visitor.timezone);
 
@@ -156,6 +216,8 @@ export default function ChatPage() {
       } else if (ev.type === "message" && ev.message) {
         const m = ev.message;
         const cid = ev.conversationId || m.conversationId!;
+        // Gelen ziyaretçi mesajında sesli bildirim
+        if (m.sender === "VISITOR" && !mutedRef.current) playPing();
         // Seçili konuşmadaysa thread'e ekle
         if (cid === cur) {
           setDetail((d) => {
@@ -275,17 +337,34 @@ export default function ChatPage() {
       <div className="w-[300px] border-r border-[var(--asana-border)] flex flex-col bg-[var(--asana-bg-white)]">
         <div className="p-3 border-b border-[var(--asana-border)]">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="font-bold text-[var(--asana-text)]">Gelen Kutusu</h2>
-            <button
-              onClick={() => setShowSites(true)}
-              className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-[var(--asana-accent)] hover:bg-[var(--asana-accent-hover)] text-white font-medium"
-              title="Site ekle / embed kodu"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Site
-            </button>
+            <h2 className="font-bold text-[var(--asana-text)]">Inbox</h2>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={toggleMute}
+                className="p-1.5 rounded-lg text-[var(--asana-text-secondary)] hover:bg-[var(--asana-bg)]"
+                title={muted ? "Sound off — click to enable" : "Sound on — click to mute"}
+              >
+                {muted ? (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 9l4 4m0-4l-4 4" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728" />
+                  </svg>
+                )}
+              </button>
+              <button
+                onClick={() => setShowSites(true)}
+                className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-[var(--asana-accent)] hover:bg-[var(--asana-accent-hover)] text-white font-medium"
+                title="Add site / embed code"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Site
+              </button>
+            </div>
           </div>
           <div className="flex gap-1 text-xs mb-2">
             {(["OPEN", "RESOLVED", "ALL"] as const).map((f) => (
@@ -296,30 +375,30 @@ export default function ChatPage() {
                   filter === f ? "bg-[var(--asana-accent)] text-white" : "text-[var(--asana-text-secondary)] hover:bg-[var(--asana-bg)]"
                 }`}
               >
-                {f === "OPEN" ? "Açık" : f === "RESOLVED" ? "Çözüldü" : "Tümü"}
+                {f === "OPEN" ? "Open" : f === "RESOLVED" ? "Resolved" : "All"}
               </button>
             ))}
           </div>
-          {/* Siteye göre kategorize */}
+          {/* Filter by site */}
           <select
             value={siteFilter}
             onChange={(e) => setSiteFilter(e.target.value)}
             className="w-full text-xs px-2 py-1.5 rounded-lg border border-[var(--asana-border)] bg-transparent text-[var(--asana-text)] outline-none focus:border-[var(--asana-accent)]"
           >
-            <option value="">Tüm siteler ({websites.length})</option>
+            <option value="">All sites ({websites.length})</option>
             {websites.map((w) => (
               <option key={w.id} value={w.id}>
                 {w.name}
-                {!w.isOwner ? " (üye)" : ""}
+                {!w.isOwner ? " (member)" : ""}
               </option>
             ))}
           </select>
         </div>
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <p className="p-4 text-sm text-[var(--asana-text-secondary)]">Yükleniyor…</p>
+            <p className="p-4 text-sm text-[var(--asana-text-secondary)]">Loading…</p>
           ) : convs.length === 0 ? (
-            <p className="p-4 text-sm text-[var(--asana-text-secondary)]">Konuşma yok.</p>
+            <p className="p-4 text-sm text-[var(--asana-text-secondary)]">No conversations.</p>
           ) : (
             convs.map((c) => (
               <button
@@ -343,7 +422,7 @@ export default function ChatPage() {
                     )}
                   </div>
                   <p className="text-xs text-[var(--asana-text-secondary)] truncate">
-                    {c.lastMessage ? (c.lastMessage.sender === "OPERATOR" ? "Siz: " : "") + c.lastMessage.body : "—"}
+                    {c.lastMessage ? (c.lastMessage.sender === "OPERATOR" ? "You: " : "") + c.lastMessage.body : "—"}
                   </p>
                   <span className="text-[10px] text-[var(--asana-text-secondary)] flex items-center gap-1">
                     <span className="w-2 h-2 rounded-full shrink-0" style={{ background: c.website.color }} />
@@ -362,7 +441,7 @@ export default function ChatPage() {
       <div className="flex-1 flex flex-col bg-[var(--asana-bg)]">
         {!detail ? (
           <div className="flex-1 flex items-center justify-center text-[var(--asana-text-secondary)] text-sm">
-            Bir konuşma seçin
+            Select a conversation
           </div>
         ) : (
           <>
@@ -370,9 +449,9 @@ export default function ChatPage() {
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-[var(--asana-text)]">{visitorLabel(detail.visitor)}</span>
                 {detail.visitor.online ? (
-                  <span className="text-xs text-green-600">● çevrimiçi</span>
+                  <span className="text-xs text-green-600">● online</span>
                 ) : (
-                  <span className="text-xs text-[var(--asana-text-secondary)]">● çevrimdışı</span>
+                  <span className="text-xs text-[var(--asana-text-secondary)]">● offline</span>
                 )}
               </div>
               <button
@@ -381,7 +460,7 @@ export default function ChatPage() {
                   detail.status === "OPEN" ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-[var(--asana-bg)] text-[var(--asana-text-secondary)] hover:bg-[var(--asana-border)]"
                 }`}
               >
-                {detail.status === "OPEN" ? "Çözüldü işaretle" : "Yeniden aç"}
+                {detail.status === "OPEN" ? "Mark resolved" : "Reopen"}
               </button>
             </div>
 
@@ -389,7 +468,7 @@ export default function ChatPage() {
               {detail.messages.map((m) => (
                 <MsgBubble key={m.id} m={m} color={convs.find((c) => c.id === detail.id)?.website.color || "#1e88e5"} />
               ))}
-              {visitorTyping && <div className="text-xs text-[var(--asana-text-secondary)] italic ml-1">yazıyor…</div>}
+              {visitorTyping && <div className="text-xs text-[var(--asana-text-secondary)] italic ml-1">typing…</div>}
               <div ref={bottomRef} />
             </div>
 
@@ -404,7 +483,7 @@ export default function ChatPage() {
                   }
                 }}
                 rows={1}
-                placeholder="Yanıt yazın…  (Enter ile gönder)"
+                placeholder="Type a reply…  (Enter to send)"
                 className="flex-1 resize-none px-3 py-2 rounded-lg border border-[var(--asana-border)] bg-transparent text-[var(--asana-text)] text-sm outline-none focus:border-[var(--asana-accent)] max-h-32"
               />
               <button
@@ -412,7 +491,7 @@ export default function ChatPage() {
                 disabled={!input.trim()}
                 className="px-4 py-2 rounded-lg bg-[var(--asana-accent)] hover:bg-[var(--asana-accent-hover)] text-white text-sm font-medium disabled:opacity-40"
               >
-                Gönder
+                Send
               </button>
             </div>
           </>
@@ -422,21 +501,21 @@ export default function ChatPage() {
       {/* Sağ: ziyaretçi detayları */}
       {detail && (
         <div className="w-[260px] border-l border-[var(--asana-border)] bg-[var(--asana-bg-white)] p-4 hidden lg:block overflow-y-auto">
-          <h3 className="font-semibold text-[var(--asana-text)] mb-3">Ziyaretçi</h3>
+          <h3 className="font-semibold text-[var(--asana-text)] mb-3">Visitor</h3>
           <dl className="space-y-3 text-sm">
-            <Info label="İsim" value={detail.visitor.name || "—"} />
-            <Info label="E-posta" value={detail.visitor.email || "—"} />
+            <Info label="Name" value={detail.visitor.name || "—"} />
+            <Info label="Email" value={detail.visitor.email || "—"} />
             <Info
-              label="Konum (saat diliminden)"
+              label="Location (from timezone)"
               value={[detail.visitor.city, detail.visitor.country].filter(Boolean).join(", ") || "—"}
             />
-            <Info label="Saat dilimi" value={detail.visitor.timezone || "—"} />
-            <Info label="Yerel saati" value={localTime ? `${localTime} 🕒` : "—"} />
-            <Info label="Dil" value={detail.visitor.language || "—"} />
-            <Info label="Şu anki sayfa" value={detail.visitor.currentUrl || "—"} />
+            <Info label="Timezone" value={detail.visitor.timezone || "—"} />
+            <Info label="Local time" value={localTime ? `${localTime} 🕒` : "—"} />
+            <Info label="Language" value={detail.visitor.language || "—"} />
+            <Info label="Current page" value={detail.visitor.currentUrl || "—"} />
             <Info label="Referrer" value={detail.visitor.referrer || "—"} />
-            <Info label="Durum" value={detail.visitor.online ? "Çevrimiçi" : "Çevrimdışı"} />
-            <Info label="Tarayıcı" value={detail.visitor.userAgent || "—"} />
+            <Info label="Status" value={detail.visitor.online ? "Online" : "Offline"} />
+            <Info label="Browser" value={detail.visitor.userAgent || "—"} />
           </dl>
         </div>
       )}
@@ -461,7 +540,7 @@ function MsgBubble({ m, color }: { m: Msg; color: string }) {
       >
         {m.body}
       </div>
-      {op && m.readAt && <span className="text-[10px] text-[var(--asana-text-secondary)] mt-0.5 mr-1">Görüldü</span>}
+      {op && m.readAt && <span className="text-[10px] text-[var(--asana-text-secondary)] mt-0.5 mr-1">Seen</span>}
     </div>
   );
 }
@@ -532,7 +611,7 @@ function MembersManager({ websiteId }: { websiteId: string }) {
       load();
     } else {
       const d = await res.json().catch(() => ({}));
-      setErr(d.error || "Eklenemedi");
+      setErr(d.error || "Could not add");
     }
   };
 
@@ -548,20 +627,20 @@ function MembersManager({ websiteId }: { websiteId: string }) {
   return (
     <div className="mt-2 pt-2 border-t border-[var(--asana-border)]">
       <button onClick={() => setOpen((o) => !o)} className="text-xs text-[var(--asana-blue)] hover:underline">
-        {open ? "▾ Kullanıcılar" : "▸ Kullanıcılar (operatör ata)"}
+        {open ? "▾ Operators" : "▸ Operators (assign users)"}
       </button>
       {open && (
         <div className="mt-2 space-y-2">
           {owner && (
             <div className="flex items-center justify-between text-xs">
               <span className="text-[var(--asana-text)]">{owner.name} · {owner.email}</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--asana-bg)] text-[var(--asana-text-secondary)]">sahip</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--asana-bg)] text-[var(--asana-text-secondary)]">owner</span>
             </div>
           )}
           {members.map((m) => (
             <div key={m.id} className="flex items-center justify-between text-xs">
               <span className="text-[var(--asana-text)]">{m.name} · {m.email}</span>
-              <button onClick={() => remove(m.id)} className="text-red-500 hover:underline text-[11px]">çıkar</button>
+              <button onClick={() => remove(m.id)} className="text-red-500 hover:underline text-[11px]">remove</button>
             </div>
           ))}
           <div className="flex gap-1">
@@ -569,11 +648,11 @@ function MembersManager({ websiteId }: { websiteId: string }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && add()}
-              placeholder="kullanici@eposta.com"
+              placeholder="user@email.com"
               className="flex-1 text-xs px-2 py-1.5 rounded border border-[var(--asana-border)] bg-transparent text-[var(--asana-text)] outline-none focus:border-[var(--asana-accent)]"
             />
             <button onClick={add} disabled={busy || !email.trim()} className="text-xs px-2.5 py-1.5 rounded bg-[var(--asana-accent)] hover:bg-[var(--asana-accent-hover)] text-white disabled:opacity-50">
-              Ata
+              Assign
             </button>
           </div>
           {err && <p className="text-[11px] text-red-500">{err}</p>}
@@ -633,35 +712,35 @@ function SitesModal({ onClose }: { onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-1">
-          <h2 className="text-lg font-bold text-[var(--asana-text)]">Siteler</h2>
+          <h2 className="text-lg font-bold text-[var(--asana-text)]">Sites</h2>
           <button onClick={onClose} className="text-[var(--asana-text-secondary)] hover:text-[var(--asana-text)] text-xl leading-none">×</button>
         </div>
         <p className="text-xs text-[var(--asana-text-secondary)] mb-4">
-          Site ekleyin, JS kodunu sitenizin <code>&lt;/body&gt;</code> öncesine yapıştırın. Sohbetler bu ekranda düşer.
+          Add a site and paste the JS code right before your page&apos;s <code>&lt;/body&gt;</code>. Conversations land in this screen.
         </p>
 
-        {/* Ekle */}
+        {/* Add */}
         <div className="flex gap-2 items-end mb-5 flex-wrap">
           <div className="flex-1 min-w-[140px]">
-            <label className="block text-xs font-medium text-[var(--asana-text-secondary)] mb-1">Site adı</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Şirket Sitesi"
+            <label className="block text-xs font-medium text-[var(--asana-text-secondary)] mb-1">Site name</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Company Site"
               className="w-full px-3 py-2 rounded-lg border border-[var(--asana-border)] bg-transparent text-[var(--asana-text)] text-sm outline-none focus:border-[var(--asana-accent)]" />
           </div>
           <div className="flex-1 min-w-[140px]">
-            <label className="block text-xs font-medium text-[var(--asana-text-secondary)] mb-1">Alan adı (ops.)</label>
-            <input value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="ornek.com"
+            <label className="block text-xs font-medium text-[var(--asana-text-secondary)] mb-1">Domain (optional)</label>
+            <input value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="example.com"
               className="w-full px-3 py-2 rounded-lg border border-[var(--asana-border)] bg-transparent text-[var(--asana-text)] text-sm outline-none focus:border-[var(--asana-accent)]" />
           </div>
           <button onClick={add} disabled={busy || !name.trim()}
             className="px-4 py-2 rounded-lg bg-[var(--asana-accent)] hover:bg-[var(--asana-accent-hover)] text-white text-sm font-medium disabled:opacity-50">
-            {busy ? "…" : "Ekle"}
+            {busy ? "…" : "Add"}
           </button>
         </div>
 
-        {/* Liste */}
+        {/* List */}
         <div className="space-y-3">
           {sites.length === 0 ? (
-            <p className="text-sm text-[var(--asana-text-secondary)]">Henüz site yok.</p>
+            <p className="text-sm text-[var(--asana-text-secondary)]">No sites yet.</p>
           ) : (
             sites.map((s) => (
               <div key={s.id} className="border border-[var(--asana-border)] rounded-lg p-3">
@@ -670,7 +749,7 @@ function SitesModal({ onClose }: { onClose: () => void }) {
                     {s.name} {s.domain && <span className="text-[var(--asana-text-secondary)] font-normal">· {s.domain}</span>}
                   </span>
                   <button onClick={() => copy(s.publicKey)} className="text-xs px-2 py-1 rounded bg-[var(--asana-bg)] hover:bg-[var(--asana-border)] text-[var(--asana-text)]">
-                    {copied === s.publicKey ? "Kopyalandı ✓" : "Kodu kopyala"}
+                    {copied === s.publicKey ? "Copied ✓" : "Copy code"}
                   </button>
                 </div>
                 <pre className="bg-[#1e1f21] text-[#d6d6d6] text-[11px] rounded p-2 overflow-x-auto whitespace-pre-wrap">{snippet(s.publicKey)}</pre>
@@ -678,7 +757,7 @@ function SitesModal({ onClose }: { onClose: () => void }) {
                   <MembersManager websiteId={s.id} />
                 ) : (
                   <div className="mt-2 pt-2 border-t border-[var(--asana-border)] text-[11px] text-[var(--asana-text-secondary)]">
-                    Bu siteye üye olarak eklendiniz.
+                    You were added to this site as a member.
                   </div>
                 )}
               </div>

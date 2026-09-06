@@ -221,13 +221,13 @@ function WidgetInner() {
   };
 
   const color = config?.color || "#1e88e5";
-  const opName = config?.operatorName || "Destek";
+  const opName = config?.operatorName || "Support";
 
   // ── Kapalı: baloncuk ──
   if (!open) {
     return (
       <div style={{ position: "fixed", bottom: 16, right: 16, ...wrap }}>
-        <button aria-label="Sohbeti aç" onClick={() => toggle(true)} style={{ ...bubble, background: color }}>
+        <button aria-label="Open chat" onClick={() => toggle(true)} style={{ ...bubble, background: color }}>
           <ChatIcon />
           {unread > 0 && <span style={badge}>{unread}</span>}
         </button>
@@ -245,10 +245,10 @@ function WidgetInner() {
             <div style={avatar}>{opName.charAt(0).toUpperCase()}</div>
             <div>
               <div style={{ fontWeight: 600, fontSize: 15 }}>{opName}</div>
-              <div style={{ fontSize: 12, opacity: 0.85 }}>Genelde birkaç dakikada yanıtlar</div>
+              <div style={{ fontSize: 12, opacity: 0.85 }}>Typically replies within minutes</div>
             </div>
           </div>
-          <button aria-label="Kapat" onClick={() => toggle(false)} style={closeBtn}>
+          <button aria-label="Close" onClick={() => toggle(false)} style={closeBtn}>
             <CloseIcon />
           </button>
         </div>
@@ -265,7 +265,7 @@ function WidgetInner() {
               key={m.id}
               side={m.sender === "VISITOR" ? "right" : "left"}
               color={color}
-              name={m.sender === "OPERATOR" ? m.operator?.name || opName : undefined}
+              name={m.sender === "OPERATOR" ? opName : undefined}
               pending={m.pending}
               seen={m.sender === "VISITOR" ? !!m.readAt : undefined}
             >
@@ -286,7 +286,7 @@ function WidgetInner() {
             value={input}
             onChange={(e) => onInputChange(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), send())}
-            placeholder="Mesajınızı yazın…"
+            placeholder="Type your message…"
             style={inputBox}
           />
           <button onClick={send} disabled={!input.trim()} style={{ ...sendBtn, background: color, opacity: input.trim() ? 1 : 0.4 }}>
@@ -345,7 +345,7 @@ function Bubble({
       >
         {children}
       </div>
-      {right && seen && <span style={{ fontSize: 10, color: "#8a8f98", marginTop: 2, marginRight: 4 }}>Görüldü</span>}
+      {right && seen && <span style={{ fontSize: 10, color: "#8a8f98", marginTop: 2, marginRight: 4 }}>Seen</span>}
     </div>
   );
 }
