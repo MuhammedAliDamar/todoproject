@@ -43,7 +43,9 @@ Yardımcılar `src/lib/chat.ts`: `getClientIp`, `enrichVisitorGeo` (fire-and-for
 ### Resim eki (güvenli)
 Hem ziyaretçi hem operatör mesaja **sadece resim** ekleyebilir. `src/lib/upload.ts`:
 - `sniffImage(buf)` türü **magic-byte**'tan belirler (PNG/JPEG/GIF/WebP). İstemcinin bildirdiği MIME/uzantı **hiç** kullanılmaz → spoof edilemez. **SVG kabul edilmez** (script gömülü XSS riski).
-- `saveImageUpload(file)` boyut (≤5MB, hem `file.size` hem gerçek buffer uzunluğu), tür doğrular; dosyayı `public/uploads/chat/<uuid>.<ext>` altına **rastgele adla** yazar (istemci adı kullanılmaz → path traversal yok).
+- `saveImageUpload(file)` boyut (≤5MB, hem `file.size` hem gerçek buffer uzunluğu), tür doğrular; dosyayı `public/uploads/chat/<uuid>.<ext>` altına **rastgele adla** yazar (istemci adı kullanılmaz → path traversal yok). Dönen URL `/api/media/chat/<ad>`'dir.
+- **Sunum API route'undan:** `GET /api/media/chat/[name]` (public, middleware'de). Next production'da `public/`'e **runtime yazılan** dosyaları güvenilir sunmadığı için resim node app'ten stream edilir. Ad kalıbı `^[a-f0-9-]{8,}\.(png|jpg|gif|webp)$` ile sınırlı (traversal/rastgele dosya okuma yok).
+- **24 saat ömür:** yüklenen dosyalar 24 saat sonra düşer. `UPLOAD_TTL_MS`. Serve anında `mtime` kontrolü (süresi dolmuşsa 410 + `unlink`) + her yüklemede saatte-bir `sweepExpiredUploads()` ile eski dosyalar silinir. **DB mesaj kaydı silinmez**, sadece dosya kalkar; `Cache-Control: max-age=86400`.
 - Endpoint'ler: `POST /api/widget/upload` (public, ziyaretçi; rate-limit token 10/dk + IP 20/dk, mesaj route'unun konuşma mantığını taşır) ve `POST /api/chat/conversations/[id]/upload` (auth, operatör). İkisi de `ChatMessage`'a `attachmentUrl`+`attachmentType="image"` yazıp SSE ile yayınlar.
 - UI: widget & panel input barında ataç butonu (`accept="image/*"` raster), optimistic önizleme (objectURL), balonda tıklanabilir `<img>`; liste önizlemesinde "📷 Photo".
 - `.gitignore`: `public/uploads/*` (kullanıcı yüklemeleri commit edilmez, `.gitkeep` korunur).

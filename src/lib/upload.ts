@@ -6,11 +6,43 @@
  * AÇIK widget'tan gelebildiği için burada tür SADECE dosyanın gerçek imzasından
  * (magic bytes) belirlenir; SVG kabul edilmez (script gömülü XSS riski).
  */
-import { writeFile, mkdir } from "fs/promises";
+import { writeFile, mkdir, readdir, stat, unlink } from "fs/promises";
 import path from "path";
 import crypto from "crypto";
 
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB
+export const UPLOAD_TTL_MS = 24 * 60 * 60 * 1000; // yüklenen dosya ömrü: 24 saat
+
+export const CHAT_UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "chat");
+
+let _lastSweep = 0;
+
+/**
+ * 24 saatten eski yüklenmiş resimleri diskten siler (best-effort, saatte en fazla bir kez).
+ * DB'deki mesaj kaydına DOKUNMAZ; sadece süresi dolan dosyayı kaldırır.
+ */
+export async function sweepExpiredUploads(): Promise<void> {
+  const now = Date.now();
+  if (now - _lastSweep < 60 * 60 * 1000) return; // saatte bir yeter
+  _lastSweep = now;
+  try {
+    const files = await readdir(CHAT_UPLOAD_DIR);
+    await Promise.all(
+      files
+        .filter((f) => f !== ".gitkeep")
+        .map(async (f) => {
+          try {
+            const s = await stat(path.join(CHAT_UPLOAD_DIR, f));
+            if (now - s.mtimeMs > UPLOAD_TTL_MS) await unlink(path.join(CHAT_UPLOAD_DIR, f));
+          } catch {
+            /* yoksay */
+          }
+        })
+    );
+  } catch {
+    /* dizin yoksa yoksay */
+  }
+}
 
 /**
  * Tampon başındaki sihirli baytlardan resim türünü belirler.
@@ -55,13 +87,16 @@ export async function saveImageUpload(
   if (!kind) return { error: "Only image files (PNG, JPEG, GIF, WebP) are allowed" };
 
   const safeName = `${crypto.randomUUID()}.${kind.ext}`; // istemci adı hiç kullanılmaz
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "chat");
-  await mkdir(uploadDir, { recursive: true });
+  await mkdir(CHAT_UPLOAD_DIR, { recursive: true });
 
-  const filePath = path.join(uploadDir, safeName);
+  const filePath = path.join(CHAT_UPLOAD_DIR, safeName);
   // Path traversal güvencesi (safeName zaten UUID+sabit uzantı ama yine de kontrol)
-  if (!filePath.startsWith(uploadDir + path.sep)) return { error: "Invalid path" };
+  if (!filePath.startsWith(CHAT_UPLOAD_DIR + path.sep)) return { error: "Invalid path" };
 
   await writeFile(filePath, buffer);
-  return { url: `/uploads/chat/${safeName}`, mime: kind.mime };
+  // Yeni yükleme fırsatını süresi dolmuşları temizlemek için de kullan
+  void sweepExpiredUploads();
+  // Not: statik /uploads yerine API route'undan sunulur (Next runtime public dosyaları
+  // güvenilir sunmuyor) ve 24 saat ömür bu route'ta uygulanır.
+  return { url: `/api/media/chat/${safeName}`, mime: kind.mime };
 }
