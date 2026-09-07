@@ -20,6 +20,7 @@ interface ConvItem {
     city: string | null;
     currentUrl: string | null;
     online: boolean;
+    lastSeenAt?: string | null;
   };
   lastMessage: { body: string; sender: string; createdAt: string } | null;
 }
@@ -122,6 +123,13 @@ export default function ChatPage() {
   const selectedRef = useRef<string | null>(null);
   selectedRef.current = selectedId;
   const openConvRef = useRef<((id: string) => void) | null>(null);
+  // Canlı presence: ziyaretçi id → son görülme (ms). 45sn geçerse offline sayılır.
+  const presence = useRef<Map<string, number>>(new Map());
+  const [onlineTick, setOnlineTick] = useState(0);
+  const detailRef = useRef<Detail | null>(null);
+  const convsRef = useRef<ConvItem[]>([]);
+  detailRef.current = detail;
+  convsRef.current = convs;
   const typingClear = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTyping = useRef(0);
   const mutedRef = useRef(false);
@@ -144,6 +152,26 @@ export default function ChatPage() {
   };
 
   const localTime = useLocalTime(detail?.visitor.timezone);
+
+  // 10sn'de bir yeniden hesapla → ziyaretçi ping'i kesilince offline'a düşer (sayfa yenilemeden)
+  useEffect(() => {
+    const iv = setInterval(() => setOnlineTick((t) => t + 1), 10000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // Ziyaretçi şu an online mı? Önce canlı presence, yoksa son görülme zamanı.
+  const ONLINE_MS = 45000;
+  const onlineOf = (id: string, lastSeenAt?: string | null, fallback?: boolean) => {
+    void onlineTick; // her tick'te yeniden hesaplansın
+    const ts = presence.current.get(id);
+    if (ts !== undefined) return Date.now() - ts < ONLINE_MS;
+    if (lastSeenAt) return Date.now() - Date.parse(lastSeenAt) < ONLINE_MS;
+    return !!fallback;
+  };
+  const markSeen = (id: string, online: boolean) => {
+    presence.current.set(id, online ? Date.now() : 0);
+    setOnlineTick((t) => t + 1);
+  };
 
   const loadConvs = useCallback(() => {
     const q = new URLSearchParams({ status: filter });
@@ -264,6 +292,7 @@ export default function ChatPage() {
         conversationId?: string;
         from?: string;
         by?: string;
+        visitor?: { id: string; online?: boolean; currentUrl?: string | null };
       };
       try {
         ev = JSON.parse(e.data);
@@ -280,7 +309,12 @@ export default function ChatPage() {
         const cid = ev.conversationId || m.conversationId!;
         // Gelen ziyaretçi mesajında sesli bildirim + bekleyen sayıları tazele
         if (m.sender === "VISITOR" && !mutedRef.current) playPing();
-        if (m.sender === "VISITOR") loadWebsites();
+        if (m.sender === "VISITOR") {
+          loadWebsites();
+          // Mesaj atan ziyaretçi kesin online → presence tazele
+          const vid = cid === cur ? detailRef.current?.visitor.id : convsRef.current.find((c) => c.id === cid)?.visitor.id;
+          if (vid) markSeen(vid, true);
+        }
         // Seçili konuşmadaysa thread'e ekle
         if (cid === cur) {
           setDetail((d) => {
@@ -341,8 +375,14 @@ export default function ChatPage() {
               : d
           );
         }
-      } else if (ev.type === "visitor") {
-        loadConvs();
+      } else if (ev.type === "visitor" && ev.visitor) {
+        const online = ev.visitor.online !== false;
+        markSeen(ev.visitor.id, online); // canlı presence + anında yeniden hesap
+        // Açık konuşmanın başlığındaki daireyi de anında güncelle
+        setDetail((d) =>
+          d && d.visitor.id === ev.visitor!.id ? { ...d, visitor: { ...d.visitor, online } } : d
+        );
+        if (online) loadConvs();
       }
     };
     return () => es.close();
@@ -564,7 +604,11 @@ export default function ChatPage() {
                   <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-semibold" style={{ background: c.website.color }}>
                     {initials(c.visitor.name, c.visitor.id)}
                   </div>
-                  {c.visitor.online && <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-[var(--asana-bg-white)]" />}
+                  {onlineOf(c.visitor.id, c.visitor.lastSeenAt, c.visitor.online) && (
+                    <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-[var(--asana-bg-white)]">
+                      <span className="absolute inset-0 rounded-full bg-green-400 animate-ping" />
+                    </span>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
@@ -609,7 +653,7 @@ export default function ChatPage() {
             <div className="px-4 py-3 border-b border-[var(--asana-border)] bg-[var(--asana-bg-white)] flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-[var(--asana-text)]">{visitorLabel(detail.visitor)}</span>
-                {detail.visitor.online ? (
+                {onlineOf(detail.visitor.id, detail.visitor.lastSeenAt, detail.visitor.online) ? (
                   <span className="flex items-center gap-1.5 text-xs text-green-600">
                     <span className="relative flex h-2.5 w-2.5">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
@@ -755,7 +799,7 @@ export default function ChatPage() {
                 <Info label="Language" value={detail.visitor.language || "—"} />
                 <Info label="Current page" value={detail.visitor.currentUrl || "—"} />
                 <Info label="Referrer" value={detail.visitor.referrer || "—"} />
-                <Info label="Status" value={detail.visitor.online ? "Online" : "Offline"} />
+                <Info label="Status" value={onlineOf(detail.visitor.id, detail.visitor.lastSeenAt, detail.visitor.online) ? "Online" : "Offline"} />
                 <Info label="Browser" value={detail.visitor.userAgent || "—"} />
               </dl>
             </>

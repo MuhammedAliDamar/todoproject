@@ -174,7 +174,28 @@ function WidgetInner() {
       post("/api/widget/ping", { publicKey: key, token, currentUrl: pageUrlRef.current || document.referrer || null });
     ping();
     const iv = setInterval(ping, 30000);
-    return () => clearInterval(iv);
+
+    // Sekme kapanınca/gizlenince operatöre anında "offline" bildir (sayfa yenilemeden görünsün)
+    const beaconOffline = () => {
+      try {
+        const blob = new Blob([JSON.stringify({ publicKey: key, token, offline: true })], { type: "application/json" });
+        navigator.sendBeacon("/api/widget/ping", blob);
+      } catch {
+        /* yoksay */
+      }
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") beaconOffline();
+      else ping(); // geri döndü → tekrar online
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", beaconOffline);
+
+    return () => {
+      clearInterval(iv);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", beaconOffline);
+    };
   }, [key, token]);
 
   // Yeni mesajda en alta kaydır

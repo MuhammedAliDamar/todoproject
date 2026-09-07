@@ -52,6 +52,7 @@ export async function GET(req: NextRequest) {
           city: c.visitor.city,
           currentUrl: c.visitor.currentUrl,
           online: isOnline(c.visitor.lastSeenAt),
+          lastSeenAt: c.visitor.lastSeenAt,
         },
         lastMessage: c.messages[0]
           ? {

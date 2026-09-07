@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   try {
     const raw = await req.json();
-    const { publicKey, token, typing, read } = raw;
+    const { publicKey, token, typing, read, offline } = raw;
     if (!publicKey || !token) return errorResponse("Invalid payload", 400);
 
     // Rate limit: token başına 120/dk (heartbeat 30s + typing 2s throttle + read)
@@ -38,6 +38,16 @@ export async function POST(req: NextRequest) {
       where: { token, websiteId: website.id },
     });
     if (!visitor) return errorResponse("Visitor not found", 404);
+
+    // Ziyaretçi sekmeyi kapattı/gizledi → anında offline bildir (lastSeenAt'a dokunma)
+    if (offline) {
+      await prisma.visitor.update({ where: { id: visitor.id }, data: { online: false } });
+      publish(websiteTopic(website.id), {
+        type: "visitor",
+        visitor: { id: visitor.id, online: false },
+      });
+      return jsonResponse({ ok: true });
+    }
 
     await prisma.visitor.update({
       where: { id: visitor.id },
