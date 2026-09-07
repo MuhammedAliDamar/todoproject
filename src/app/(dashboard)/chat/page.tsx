@@ -519,10 +519,14 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)]">
-      {/* Sol: konuşma listesi */}
-      <div className="w-[300px] border-r border-[var(--asana-border)] flex flex-col bg-[var(--asana-bg-white)]">
-        <div className="p-3 border-b border-[var(--asana-border)]">
+    <div className="flex h-[calc(100dvh-3.5rem)] overflow-hidden">
+      {/* Sol: konuşma listesi (mobilde tam genişlik; konuşma açıkken gizlenir) */}
+      <div
+        className={`w-full md:w-[300px] md:shrink-0 border-r border-[var(--asana-border)] flex-col bg-[var(--asana-bg-white)] ${
+          detail ? "hidden md:flex" : "flex"
+        }`}
+      >
+        <div className="shrink-0 p-3 border-b border-[var(--asana-border)]">
           <div className="flex items-center justify-between mb-2">
             <h2 className="font-bold text-[var(--asana-text)]">Inbox</h2>
             <div className="flex items-center gap-1.5">
@@ -621,7 +625,7 @@ export default function ChatPage() {
             )}
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto">
           {search.trim().length >= 2 ? (
             searching && searchResults.length === 0 ? (
               <p className="p-4 text-sm text-[var(--asana-text-secondary)]">Searching…</p>
@@ -764,42 +768,51 @@ export default function ChatPage() {
         </div>
       </div>
 
-      {/* Orta: mesaj akışı */}
-      <div className="flex-1 flex flex-col bg-[var(--asana-bg)]">
+      {/* Orta: mesaj akışı (mobilde yalnızca konuşma açıkken görünür) */}
+      <div className={`flex-1 flex-col bg-[var(--asana-bg)] min-w-0 min-h-0 ${detail ? "flex" : "hidden md:flex"}`}>
         {!detail ? (
           <div className="flex-1 flex items-center justify-center text-[var(--asana-text-secondary)] text-sm">
             Select a conversation
           </div>
         ) : (
           <>
-            <div className="px-4 py-3 border-b border-[var(--asana-border)] bg-[var(--asana-bg-white)] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-[var(--asana-text)]">{visitorLabel(detail.visitor)}</span>
+            <div className="shrink-0 px-3 md:px-4 py-3 border-b border-[var(--asana-border)] bg-[var(--asana-bg-white)] flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <button
+                  onClick={() => { setSelectedId(null); setDetail(null); setPanelOpen(false); }}
+                  className="md:hidden -ml-1 p-1 rounded-lg text-[var(--asana-text-secondary)] hover:bg-[var(--asana-bg)] shrink-0"
+                  title="Back to inbox"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <span className="font-semibold text-[var(--asana-text)] truncate">{visitorLabel(detail.visitor)}</span>
                 {onlineOf(detail.visitor.id, detail.visitor.lastSeenAt, detail.visitor.online) ? (
-                  <span className="flex items-center gap-1.5 text-xs text-green-600">
+                  <span className="flex items-center gap-1.5 text-xs text-green-600 shrink-0">
                     <span className="relative flex h-2.5 w-2.5">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
                       <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
                     </span>
-                    live on site
+                    <span className="hidden sm:inline">live on site</span>
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1.5 text-xs text-[var(--asana-text-secondary)]">
+                  <span className="flex items-center gap-1.5 text-xs text-[var(--asana-text-secondary)] shrink-0">
                     <span className="inline-flex rounded-full h-2.5 w-2.5 bg-gray-300" />
-                    offline
+                    <span className="hidden sm:inline">offline</span>
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => setPanelOpen((v) => !v)}
-                  className="text-xs px-3 py-1.5 rounded-lg font-medium bg-[var(--asana-bg)] text-[var(--asana-text-secondary)] hover:bg-[var(--asana-border)] flex items-center gap-1"
+                  className="text-xs px-2 sm:px-3 py-1.5 rounded-lg font-medium bg-[var(--asana-bg)] text-[var(--asana-text-secondary)] hover:bg-[var(--asana-border)] flex items-center gap-1"
                   title="Visitor details & page history"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  Details
+                  <span className="hidden sm:inline">Details</span>
                 </button>
                 <button
                   onClick={toggleStatus}
@@ -812,7 +825,7 @@ export default function ChatPage() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2">
               {detail.messages.map((m) => (
                 <MsgBubble key={m.id} m={m} color={convs.find((c) => c.id === detail.id)?.website.color || "#1e88e5"} />
               ))}
@@ -820,8 +833,8 @@ export default function ChatPage() {
               <div ref={bottomRef} />
             </div>
 
-            {uploadErr && <div className="px-3 pt-2 text-xs text-red-500">{uploadErr}</div>}
-            <div className="p-3 border-t border-[var(--asana-border)] bg-[var(--asana-bg-white)] flex gap-2 items-end">
+            {uploadErr && <div className="shrink-0 px-3 pt-2 text-xs text-red-500">{uploadErr}</div>}
+            <div className="shrink-0 p-3 border-t border-[var(--asana-border)] bg-[var(--asana-bg-white)] flex gap-2 items-end">
               <input
                 ref={fileRef}
                 type="file"
@@ -866,7 +879,7 @@ export default function ChatPage() {
       {/* Sağ: ziyaretçi detayları (lg'de sabit; küçük ekranda "Details" ile overlay) */}
       {detail && (
         <div
-          className={`w-[280px] border-l border-[var(--asana-border)] bg-[var(--asana-bg-white)] p-4 overflow-y-auto lg:block ${
+          className={`w-[280px] max-w-[85vw] lg:max-w-none shrink-0 border-l border-[var(--asana-border)] bg-[var(--asana-bg-white)] p-4 overflow-y-auto lg:block ${
             panelOpen ? "block fixed lg:static right-0 top-14 bottom-0 z-30 shadow-2xl lg:shadow-none" : "hidden"
           }`}
         >
