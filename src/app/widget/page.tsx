@@ -54,6 +54,10 @@ function WidgetInner() {
   const lastTypingSent = useRef(0);
   const openRef = useRef(open);
   openRef.current = open;
+  // Üst sayfanın gerçek URL'i (widget.js postMessage ile bildirir; iframe içi location host'u vermez).
+  const pageUrlRef = useRef<string | null>(typeof document !== "undefined" ? document.referrer || null : null);
+  const tokenRef = useRef<string | null>(null);
+  tokenRef.current = token;
 
   const parentPost = useCallback((data: unknown) => {
     window.parent?.postMessage(data, "*");
@@ -77,8 +81,8 @@ function WidgetInner() {
       timezone = null;
     }
     const language = typeof navigator !== "undefined" ? navigator.language : null;
-    // Ziyaretçinin geldiği üst sayfa (iframe olduğumuz için parent referrer'ı da dene)
-    const pageUrl = document.referrer || null;
+    // Üst sayfa URL'i: widget.js henüz bildirmediyse referrer'a düş
+    const pageUrl = pageUrlRef.current || document.referrer || null;
     post("/api/widget/session", {
       publicKey: key,
       token: stored,
@@ -167,7 +171,7 @@ function WidgetInner() {
   useEffect(() => {
     if (!key || !token) return;
     const ping = () =>
-      post("/api/widget/ping", { publicKey: key, token, currentUrl: document.referrer || null });
+      post("/api/widget/ping", { publicKey: key, token, currentUrl: pageUrlRef.current || document.referrer || null });
     ping();
     const iv = setInterval(ping, 30000);
     return () => clearInterval(iv);
@@ -199,6 +203,16 @@ function WidgetInner() {
       const d = e.data || {};
       if (d.type === "marktasks:open") toggle(true);
       if (d.type === "marktasks:close") toggle(false);
+      // Üst sayfa URL'i (ilk yükleme + SPA gezinmesi) → geçmişe kaydet
+      if (d.type === "marktasks:url" && typeof d.url === "string") {
+        if (d.url !== pageUrlRef.current) {
+          pageUrlRef.current = d.url;
+          // Token hazırsa değişimi hemen kaydettir (heartbeat'i bekleme)
+          if (key && tokenRef.current) {
+            post("/api/widget/ping", { publicKey: key, token: tokenRef.current, currentUrl: d.url });
+          }
+        }
+      }
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);

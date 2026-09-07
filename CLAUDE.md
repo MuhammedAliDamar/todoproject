@@ -18,7 +18,8 @@ Embed script'li widget + operatör inbox'ı + ziyaretçi takibi. Realtime = SSE 
   - **Konum saat diliminden türetilir** (`tzToLocation` in `src/lib/chat.ts`): IANA tz → şehir (son segment) + ülke (tablo/bölge). ip-api.com sadece tz yoksa yedek. Panel sağ tarafında tz + canlı yerel saat (`useLocalTime`) + dil gösterilir; sol listede şehir/ülke.
 - `Conversation` — `status` (OPEN/RESOLVED), `assignedUserId`, `labels` (String[], operatörün serbest etiketleri), `operatorUnread`/`visitorUnread`, `lastMessageAt`.
 - `ChatMessage` — `sender` (VISITOR/OPERATOR), `userId` (operatör), `body`, `attachmentUrl`+`attachmentType` (resim eki, nullable), `readAt` (görüldü).
-- `PageView` — ziyaretçinin gezdiği sayfalar (`visitorId`, `url`, `createdAt`). Widget `session`/`ping`'te URL değişince kaydedilir (son kayıttan farklıysa). Detayda "Pages" sekmesinde zaman çizelgesi olarak gösterilir.
+- `PageView` — ziyaretçinin gezdiği sayfalar (`visitorId`, `url`, `createdAt` tam zaman damgası). Widget `session`/`ping`'te URL değişince kaydedilir (son kayıttan farklıysa). Detayda "Pages" sekmesinde tam tarih-saat + göreli zaman ile gösterilir.
+  - **Üst sayfa URL'i:** widget iframe içinde `location` host sayfayı vermez. `widget.js` (parent context) gerçek `location.href`'i `postMessage({type:"marktasks:url"})` ile iframe'e bildirir; `pushState`/`replaceState`/`popstate`/`hashchange` sarılarak **SPA gezinmeleri** de yakalanır. Widget URL değişince anında `ping` atıp PageView kaydeder. (Not: `widget.js` değişince gömülü sitelerin cache'i nedeniyle yeniden deploy + cache-bust gerekebilir.)
 - Silme yok: `Website` soft-delete (`deletedAt`).
 
 ### Operatör verimlilik özellikleri

@@ -86,6 +86,36 @@
   if (document.body) mount();
   else document.addEventListener("DOMContentLoaded", mount);
 
+  // Üst sayfanın GERÇEK URL'ini iframe'e bildir (iframe içinden location host sayfayı vermez).
+  // SPA gezinmelerinde de güncellenir → sayfa geçmişi tam kaydedilir.
+  var lastSent = "";
+  function sendUrl() {
+    try {
+      var u = location.href;
+      if (u === lastSent) return;
+      lastSent = u;
+      iframe.contentWindow.postMessage({ type: "marktasks:url", url: u }, ORIGIN || "*");
+    } catch (e) {}
+  }
+  iframe.addEventListener("load", sendUrl);
+  // history API'sini sar (SPA push/replace) + tarayıcı navigasyonu
+  try {
+    var _ps = history.pushState;
+    history.pushState = function () {
+      var r = _ps.apply(this, arguments);
+      setTimeout(sendUrl, 0);
+      return r;
+    };
+    var _rs = history.replaceState;
+    history.replaceState = function () {
+      var r = _rs.apply(this, arguments);
+      setTimeout(sendUrl, 0);
+      return r;
+    };
+  } catch (e) {}
+  window.addEventListener("popstate", sendUrl);
+  window.addEventListener("hashchange", sendUrl);
+
   // Basit JS API: $marktasks.open() / .close()
   window.$marktasks = window.$marktasks || {};
   function cmd(type) {
