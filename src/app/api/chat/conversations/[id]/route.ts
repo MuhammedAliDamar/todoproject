@@ -36,10 +36,20 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     });
     if (!full) return errorResponse("Not found", 404);
 
+    // Ziyaretçinin gezdiği sayfalar (en yeni önce)
+    const pageViews = await prisma.pageView.findMany({
+      where: { visitorId: full.visitorId },
+      orderBy: { createdAt: "desc" },
+      take: 40,
+      select: { id: true, url: true, createdAt: true },
+    });
+
     return jsonResponse({
       id: full.id,
       status: full.status,
       assignedUserId: full.assignedUserId,
+      labels: full.labels,
+      pageViews,
       visitor: {
         ...full.visitor,
         online: isOnline(full.visitor.lastSeenAt),
@@ -74,6 +84,25 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (b.assignedUserId === null || typeof b.assignedUserId === "string")
       data.assignedUserId = b.assignedUserId;
 
+    // Ziyaretçiyi yeniden adlandır (ör. "Ali Veli"). Kişi konuşmalar arası paylaşılır.
+    let renamedTo: string | null | undefined;
+    if (typeof b.visitorName === "string" || b.visitorName === null) {
+      renamedTo = typeof b.visitorName === "string" ? b.visitorName.trim().slice(0, 80) || null : null;
+      await prisma.visitor.update({ where: { id: conv.visitorId }, data: { name: renamedTo } });
+    }
+
+    // Konuşma etiketleri (serbest metin, tekilleştirilir, kırpılır)
+    if (Array.isArray(b.labels)) {
+      data.labels = [
+        ...new Set(
+          (b.labels as unknown[])
+            .filter((x): x is string => typeof x === "string")
+            .map((x) => x.trim().slice(0, 32))
+            .filter(Boolean)
+        ),
+      ].slice(0, 12);
+    }
+
     // Operatör konuşmayı açtı → ziyaretçi mesajlarını okundu say
     if (b.read === true) {
       await prisma.chatMessage.updateMany({
@@ -85,7 +114,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       publish(visitorTopic(conv.visitorId), { type: "read", conversationId: id, by: "operator" });
     }
 
-    const updated = await prisma.conversation.update({ where: { id }, data });
+    const updated = Object.keys(data).length
+      ? await prisma.conversation.update({ where: { id }, data })
+      : conv;
 
     // Panelin diğer sekmeleri güncellensin
     publish(websiteTopic(conv.websiteId), {
@@ -93,7 +124,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       conversation: { id: updated.id, status: updated.status, operatorUnread: updated.operatorUnread },
     });
 
-    return jsonResponse({ ok: true, status: updated.status });
+    return jsonResponse({ ok: true, status: updated.status, labels: updated.labels, visitorName: renamedTo });
   } catch {
     return errorResponse("Server error", 500);
   }

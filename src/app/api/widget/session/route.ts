@@ -82,6 +82,18 @@ export async function POST(req: NextRequest) {
     // Ülke/şehir yoksa arka planda doldur
     if (!visitor.country) enrichVisitorGeo(visitor.id, ip);
 
+    // İlk/yeni sayfayı navigasyon geçmişine kaydet (son kayıttan farklıysa)
+    if (typeof currentUrl === "string" && currentUrl) {
+      const last = await prisma.pageView.findFirst({
+        where: { visitorId: visitor.id },
+        orderBy: { createdAt: "desc" },
+        select: { url: true },
+      });
+      if (last?.url !== currentUrl) {
+        await prisma.pageView.create({ data: { visitorId: visitor.id, url: currentUrl } });
+      }
+    }
+
     // En güncel konuşma (durum/id için)
     const conversation = await prisma.conversation.findFirst({
       where: { visitorId: visitor.id },

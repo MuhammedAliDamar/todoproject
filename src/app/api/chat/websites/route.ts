@@ -22,8 +22,20 @@ export async function GET(req: NextRequest) {
         },
       },
     });
-    // Sahip mi üye mi bilgisini ekle
-    return jsonResponse(websites.map((w) => ({ ...w, isOwner: w.userId === userId })));
+    // Site başına bekleyen (operatörün okumadığı) mesaj sayısı
+    const waitingRows = websites.length
+      ? await prisma.conversation.groupBy({
+          by: ["websiteId"],
+          where: { websiteId: { in: websites.map((w) => w.id) }, status: "OPEN", operatorUnread: { gt: 0 } },
+          _sum: { operatorUnread: true },
+        })
+      : [];
+    const waitingMap = new Map(waitingRows.map((r) => [r.websiteId, r._sum.operatorUnread ?? 0]));
+
+    // Sahip mi üye mi bilgisini + bekleyen sayısını ekle
+    return jsonResponse(
+      websites.map((w) => ({ ...w, isOwner: w.userId === userId, waiting: waitingMap.get(w.id) ?? 0 }))
+    );
   } catch {
     return errorResponse("Server error", 500);
   }

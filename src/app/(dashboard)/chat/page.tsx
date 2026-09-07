@@ -10,6 +10,7 @@ interface ConvItem {
   status: Status;
   lastMessageAt: string;
   operatorUnread: number;
+  labels?: string[];
   website: { id: string; name: string; color: string };
   visitor: {
     id: string;
@@ -21,6 +22,17 @@ interface ConvItem {
     online: boolean;
   };
   lastMessage: { body: string; sender: string; createdAt: string } | null;
+}
+interface OnlineVisitor {
+  id: string;
+  name: string | null;
+  email: string | null;
+  city: string | null;
+  country: string | null;
+  currentUrl: string | null;
+  lastSeenAt: string;
+  website: { id: string; name: string; color: string };
+  conversationId: string | null;
 }
 interface Msg {
   id: string;
@@ -36,6 +48,8 @@ interface Msg {
 interface Detail {
   id: string;
   status: Status;
+  labels?: string[];
+  pageViews?: { id: string; url: string; createdAt: string }[];
   visitor: ConvItem["visitor"] & {
     userAgent?: string | null;
     referrer?: string | null;
@@ -77,6 +91,12 @@ function initials(name: string | null, id: string) {
 function visitorLabel(v: ConvItem["visitor"]) {
   return v.name || v.email || "Visitor #" + v.id.slice(-5);
 }
+/** Etiket metninden tutarlı bir renk üretir (hash → hue). */
+function labelStyle(label: string) {
+  let h = 0;
+  for (let i = 0; i < label.length; i++) h = (h * 31 + label.charCodeAt(i)) % 360;
+  return { background: `hsl(${h} 70% 92%)`, color: `hsl(${h} 65% 32%)` };
+}
 
 export default function ChatPage() {
   const [convs, setConvs] = useState<ConvItem[]>([]);
@@ -87,15 +107,21 @@ export default function ChatPage() {
   const [visitorTyping, setVisitorTyping] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showSites, setShowSites] = useState(false);
-  const [websites, setWebsites] = useState<{ id: string; name: string; color: string; isOwner: boolean }[]>([]);
+  const [websites, setWebsites] = useState<{ id: string; name: string; color: string; isOwner: boolean; waiting?: number }[]>([]);
   const [siteFilter, setSiteFilter] = useState("");
   const [muted, setMuted] = useState(false);
+  const [showOnline, setShowOnline] = useState(false);
+  const [online, setOnline] = useState<OnlineVisitor[]>([]);
+  const [savingName, setSavingName] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [detailTab, setDetailTab] = useState<"info" | "pages">("info");
 
   const [uploadErr, setUploadErr] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const selectedRef = useRef<string | null>(null);
   selectedRef.current = selectedId;
+  const openConvRef = useRef<((id: string) => void) | null>(null);
   const typingClear = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTyping = useRef(0);
   const mutedRef = useRef(false);
@@ -142,6 +168,74 @@ export default function ChatPage() {
     loadWebsites();
   }, [loadWebsites]);
 
+  // Çevrimiçi ziyaretçiler (konuşma başlatmamış olsalar da)
+  const loadOnline = useCallback(() => {
+    const q = siteFilter ? `?websiteId=${siteFilter}` : "";
+    fetch(`/api/chat/visitors/online${q}`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d) => setOnline(Array.isArray(d) ? d : []));
+  }, [siteFilter]);
+
+  // "Çevrimiçi" görünümü açıkken periyodik tazele; her durumda site bekleyen sayıları için websites'i tazele
+  useEffect(() => {
+    if (!showOnline) return;
+    loadOnline();
+    const iv = setInterval(() => {
+      loadOnline();
+      loadWebsites();
+    }, 15000);
+    return () => clearInterval(iv);
+  }, [showOnline, loadOnline, loadWebsites]);
+
+  // Bir ziyaretçiyle konuşma başlat (çevrimiçi listesinden) ve aç
+  const startWith = useCallback(
+    async (visitorId: string, existing: string | null) => {
+      if (existing) {
+        setShowOnline(false);
+        openConvRef.current?.(existing);
+        return;
+      }
+      const res = await fetch(`/api/chat/visitors/${visitorId}/start`, { method: "POST" });
+      if (res.ok) {
+        const d = await res.json();
+        setShowOnline(false);
+        loadConvs();
+        openConvRef.current?.(d.conversationId);
+      }
+    },
+    [loadConvs]
+  );
+
+  // Ziyaretçiyi yeniden adlandır
+  const saveName = useCallback(async (name: string) => {
+    if (!selectedRef.current) return;
+    setSavingName(true);
+    const res = await fetch(`/api/chat/conversations/${selectedRef.current}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ visitorName: name }),
+    });
+    setSavingName(false);
+    if (res.ok) {
+      const nm = name.trim() || null;
+      setDetail((d) => (d ? { ...d, visitor: { ...d.visitor, name: nm } } : d));
+      setConvs((prev) => prev.map((c) => (c.id === selectedRef.current ? { ...c, visitor: { ...c.visitor, name: nm } } : c)));
+    }
+  }, []);
+
+  // Konuşma etiketlerini kaydet
+  const saveLabels = useCallback(async (labels: string[]) => {
+    if (!selectedRef.current) return;
+    const id = selectedRef.current;
+    setDetail((d) => (d && d.id === id ? { ...d, labels } : d));
+    setConvs((prev) => prev.map((c) => (c.id === id ? { ...c, labels } : c)));
+    await fetch(`/api/chat/conversations/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ labels }),
+    });
+  }, []);
+
   // Seçili konuşmayı yükle + okundu işaretle
   const openConv = useCallback((id: string) => {
     setSelectedId(id);
@@ -155,8 +249,10 @@ export default function ChatPage() {
       body: JSON.stringify({ read: true }),
     }).then(() => {
       setConvs((prev) => prev.map((c) => (c.id === id ? { ...c, operatorUnread: 0 } : c)));
+      loadWebsites(); // bekleyen sayıları güncelle
     });
-  }, []);
+  }, [loadWebsites]);
+  openConvRef.current = openConv;
 
   // SSE
   useEffect(() => {
@@ -178,11 +274,13 @@ export default function ChatPage() {
 
       if (ev.type === "conversation") {
         loadConvs();
+        loadWebsites();
       } else if (ev.type === "message" && ev.message) {
         const m = ev.message;
         const cid = ev.conversationId || m.conversationId!;
-        // Gelen ziyaretçi mesajında sesli bildirim
+        // Gelen ziyaretçi mesajında sesli bildirim + bekleyen sayıları tazele
         if (m.sender === "VISITOR" && !mutedRef.current) playPing();
+        if (m.sender === "VISITOR") loadWebsites();
         // Seçili konuşmadaysa thread'e ekle
         if (cid === cur) {
           setDetail((d) => {
@@ -248,7 +346,7 @@ export default function ChatPage() {
       }
     };
     return () => es.close();
-  }, [loadConvs]);
+  }, [loadConvs, loadWebsites]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -364,18 +462,31 @@ export default function ChatPage() {
               </button>
             </div>
           </div>
-          <div className="flex gap-1 text-xs mb-2">
+          <div className="flex gap-1 text-xs mb-2 items-center">
             {(["OPEN", "RESOLVED", "ALL"] as const).map((f) => (
               <button
                 key={f}
-                onClick={() => setFilter(f)}
+                onClick={() => {
+                  setFilter(f);
+                  setShowOnline(false);
+                }}
                 className={`px-2.5 py-1 rounded-full ${
-                  filter === f ? "bg-[var(--asana-accent)] text-white" : "text-[var(--asana-text-secondary)] hover:bg-[var(--asana-bg)]"
+                  filter === f && !showOnline ? "bg-[var(--asana-accent)] text-white" : "text-[var(--asana-text-secondary)] hover:bg-[var(--asana-bg)]"
                 }`}
               >
                 {f === "OPEN" ? "Open" : f === "RESOLVED" ? "Resolved" : "All"}
               </button>
             ))}
+            <button
+              onClick={() => setShowOnline((v) => !v)}
+              className={`ml-auto px-2.5 py-1 rounded-full flex items-center gap-1 ${
+                showOnline ? "bg-green-600 text-white" : "text-green-700 hover:bg-green-50"
+              }`}
+              title="Show visitors currently online"
+            >
+              <span className={`w-2 h-2 rounded-full ${showOnline ? "bg-white" : "bg-green-500"}`} />
+              Online{online.length > 0 ? ` (${online.length})` : ""}
+            </button>
           </div>
           {/* Filter by site */}
           <select
@@ -383,17 +494,60 @@ export default function ChatPage() {
             onChange={(e) => setSiteFilter(e.target.value)}
             className="w-full text-xs px-2 py-1.5 rounded-lg border border-[var(--asana-border)] bg-transparent text-[var(--asana-text)] outline-none focus:border-[var(--asana-accent)]"
           >
-            <option value="">All sites ({websites.length})</option>
+            <option value="">
+              All sites{(() => {
+                const t = websites.reduce((s, w) => s + (w.waiting ?? 0), 0);
+                return t > 0 ? ` (${t})` : "";
+              })()}
+            </option>
             {websites.map((w) => (
               <option key={w.id} value={w.id}>
                 {w.name}
-                {!w.isOwner ? " (member)" : ""}
+                {w.waiting ? ` (${w.waiting})` : ""}
+                {!w.isOwner ? " · member" : ""}
               </option>
             ))}
           </select>
         </div>
         <div className="flex-1 overflow-y-auto">
-          {loading ? (
+          {showOnline ? (
+            online.length === 0 ? (
+              <p className="p-4 text-sm text-[var(--asana-text-secondary)]">No visitors online right now.</p>
+            ) : (
+              online.map((v) => (
+                <button
+                  key={v.id}
+                  onClick={() => startWith(v.id, v.conversationId)}
+                  className="w-full text-left px-3 py-3 border-b border-[var(--asana-border)] flex gap-3 items-start hover:bg-[var(--asana-bg)]"
+                >
+                  <div className="relative shrink-0">
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-semibold" style={{ background: v.website.color }}>
+                      {initials(v.name, v.id)}
+                    </div>
+                    <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-[var(--asana-bg-white)]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium text-sm text-[var(--asana-text)] truncate">
+                        {v.name || v.email || "Visitor #" + v.id.slice(-5)}
+                      </span>
+                      {v.conversationId ? (
+                        <span className="text-[10px] text-[var(--asana-text-secondary)]">open chat</span>
+                      ) : (
+                        <span className="text-[10px] text-green-700">message →</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-[var(--asana-text-secondary)] truncate">{v.currentUrl || "—"}</p>
+                    <span className="text-[10px] text-[var(--asana-text-secondary)] flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: v.website.color }} />
+                      <span className="font-medium">{v.website.name}</span>
+                      {(v.city || v.country) && ` · ${[v.city, v.country].filter(Boolean).join(", ")}`}
+                    </span>
+                  </div>
+                </button>
+              ))
+            )
+          ) : loading ? (
             <p className="p-4 text-sm text-[var(--asana-text-secondary)]">Loading…</p>
           ) : convs.length === 0 ? (
             <p className="p-4 text-sm text-[var(--asana-text-secondary)]">No conversations.</p>
@@ -422,7 +576,16 @@ export default function ChatPage() {
                   <p className="text-xs text-[var(--asana-text-secondary)] truncate">
                     {c.lastMessage ? (c.lastMessage.sender === "OPERATOR" ? "You: " : "") + c.lastMessage.body : "—"}
                   </p>
-                  <span className="text-[10px] text-[var(--asana-text-secondary)] flex items-center gap-1">
+                  {c.labels && c.labels.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {c.labels.map((l) => (
+                        <span key={l} className="text-[9px] px-1.5 py-0.5 rounded-full font-medium" style={labelStyle(l)}>
+                          {l}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <span className="text-[10px] text-[var(--asana-text-secondary)] flex items-center gap-1 mt-0.5">
                     <span className="w-2 h-2 rounded-full shrink-0" style={{ background: c.website.color }} />
                     <span className="font-medium">{c.website.name}</span>
                     {(c.visitor.city || c.visitor.country) &&
@@ -447,19 +610,40 @@ export default function ChatPage() {
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-[var(--asana-text)]">{visitorLabel(detail.visitor)}</span>
                 {detail.visitor.online ? (
-                  <span className="text-xs text-green-600">● online</span>
+                  <span className="flex items-center gap-1.5 text-xs text-green-600">
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
+                    </span>
+                    live on site
+                  </span>
                 ) : (
-                  <span className="text-xs text-[var(--asana-text-secondary)]">● offline</span>
+                  <span className="flex items-center gap-1.5 text-xs text-[var(--asana-text-secondary)]">
+                    <span className="inline-flex rounded-full h-2.5 w-2.5 bg-gray-300" />
+                    offline
+                  </span>
                 )}
               </div>
-              <button
-                onClick={toggleStatus}
-                className={`text-xs px-3 py-1.5 rounded-lg font-medium ${
-                  detail.status === "OPEN" ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-[var(--asana-bg)] text-[var(--asana-text-secondary)] hover:bg-[var(--asana-border)]"
-                }`}
-              >
-                {detail.status === "OPEN" ? "Mark resolved" : "Reopen"}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPanelOpen((v) => !v)}
+                  className="text-xs px-3 py-1.5 rounded-lg font-medium bg-[var(--asana-bg)] text-[var(--asana-text-secondary)] hover:bg-[var(--asana-border)] flex items-center gap-1"
+                  title="Visitor details & page history"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Details
+                </button>
+                <button
+                  onClick={toggleStatus}
+                  className={`text-xs px-3 py-1.5 rounded-lg font-medium ${
+                    detail.status === "OPEN" ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-[var(--asana-bg)] text-[var(--asana-text-secondary)] hover:bg-[var(--asana-border)]"
+                  }`}
+                >
+                  {detail.status === "OPEN" ? "Mark resolved" : "Reopen"}
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
@@ -513,25 +697,71 @@ export default function ChatPage() {
         )}
       </div>
 
-      {/* Sağ: ziyaretçi detayları */}
+      {/* Sağ: ziyaretçi detayları (lg'de sabit; küçük ekranda "Details" ile overlay) */}
       {detail && (
-        <div className="w-[260px] border-l border-[var(--asana-border)] bg-[var(--asana-bg-white)] p-4 hidden lg:block overflow-y-auto">
-          <h3 className="font-semibold text-[var(--asana-text)] mb-3">Visitor</h3>
-          <dl className="space-y-3 text-sm">
-            <Info label="Name" value={detail.visitor.name || "—"} />
-            <Info label="Email" value={detail.visitor.email || "—"} />
-            <Info
-              label="Location (from timezone)"
-              value={[detail.visitor.city, detail.visitor.country].filter(Boolean).join(", ") || "—"}
-            />
-            <Info label="Timezone" value={detail.visitor.timezone || "—"} />
-            <Info label="Local time" value={localTime ? `${localTime} 🕒` : "—"} />
-            <Info label="Language" value={detail.visitor.language || "—"} />
-            <Info label="Current page" value={detail.visitor.currentUrl || "—"} />
-            <Info label="Referrer" value={detail.visitor.referrer || "—"} />
-            <Info label="Status" value={detail.visitor.online ? "Online" : "Offline"} />
-            <Info label="Browser" value={detail.visitor.userAgent || "—"} />
-          </dl>
+        <div
+          className={`w-[280px] border-l border-[var(--asana-border)] bg-[var(--asana-bg-white)] p-4 overflow-y-auto lg:block ${
+            panelOpen ? "block fixed lg:static right-0 top-14 bottom-0 z-30 shadow-2xl lg:shadow-none" : "hidden"
+          }`}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-[var(--asana-text)]">Visitor</h3>
+            <button
+              onClick={() => setPanelOpen(false)}
+              className="lg:hidden text-[var(--asana-text-secondary)] hover:text-[var(--asana-text)]"
+              title="Close"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Sekmeler: Bilgi / Sayfa geçmişi */}
+          <div className="flex gap-1 text-xs mb-3">
+            <button
+              onClick={() => setDetailTab("info")}
+              className={`px-2.5 py-1 rounded-full ${detailTab === "info" ? "bg-[var(--asana-accent)] text-white" : "text-[var(--asana-text-secondary)] hover:bg-[var(--asana-bg)]"}`}
+            >
+              Info
+            </button>
+            <button
+              onClick={() => setDetailTab("pages")}
+              className={`px-2.5 py-1 rounded-full ${detailTab === "pages" ? "bg-[var(--asana-accent)] text-white" : "text-[var(--asana-text-secondary)] hover:bg-[var(--asana-bg)]"}`}
+            >
+              Pages{detail.pageViews && detail.pageViews.length > 0 ? ` (${detail.pageViews.length})` : ""}
+            </button>
+          </div>
+
+          {detailTab === "info" ? (
+            <>
+              {/* Düzenlenebilir isim */}
+              <NameEditor
+                key={detail.visitor.id}
+                name={detail.visitor.name}
+                saving={savingName}
+                onSave={saveName}
+              />
+
+              {/* Konuşma etiketleri */}
+              <LabelEditor labels={detail.labels || []} onChange={saveLabels} />
+
+              <dl className="space-y-3 text-sm mt-4">
+                <Info label="Email" value={detail.visitor.email || "—"} />
+                <Info
+                  label="Location (from timezone)"
+                  value={[detail.visitor.city, detail.visitor.country].filter(Boolean).join(", ") || "—"}
+                />
+                <Info label="Timezone" value={detail.visitor.timezone || "—"} />
+                <Info label="Local time" value={localTime ? `${localTime} 🕒` : "—"} />
+                <Info label="Language" value={detail.visitor.language || "—"} />
+                <Info label="Current page" value={detail.visitor.currentUrl || "—"} />
+                <Info label="Referrer" value={detail.visitor.referrer || "—"} />
+                <Info label="Status" value={detail.visitor.online ? "Online" : "Offline"} />
+                <Info label="Browser" value={detail.visitor.userAgent || "—"} />
+              </dl>
+            </>
+          ) : (
+            <PageHistory pages={detail.pageViews || []} />
+          )}
         </div>
       )}
 
@@ -581,11 +811,142 @@ function MsgBubble({ m, color }: { m: Msg; color: string }) {
   );
 }
 
+/** Ziyaretçinin gezdiği sayfaların zaman çizelgesi. */
+function PageHistory({ pages }: { pages: { id: string; url: string; createdAt: string }[] }) {
+  if (pages.length === 0) {
+    return <p className="text-sm text-[var(--asana-text-secondary)]">No page history yet.</p>;
+  }
+  const short = (u: string) => {
+    try {
+      const url = new URL(u);
+      return url.pathname + url.search || "/";
+    } catch {
+      return u;
+    }
+  };
+  const when = (iso: string) => {
+    const d = new Date(iso);
+    const diff = Date.now() - d.getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return "just now";
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return d.toLocaleDateString();
+  };
+  return (
+    <ol className="space-y-2 text-sm">
+      {pages.map((p) => (
+        <li key={p.id} className="border-l-2 border-[var(--asana-border)] pl-3 pb-1">
+          <a
+            href={p.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[var(--asana-blue)] hover:underline break-all block"
+            title={p.url}
+          >
+            {short(p.url)}
+          </a>
+          <span className="text-[10px] text-[var(--asana-text-secondary)]">{when(p.createdAt)}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <dt className="text-xs text-[var(--asana-text-secondary)]">{label}</dt>
       <dd className="text-[var(--asana-text)] break-words">{value}</dd>
+    </div>
+  );
+}
+
+/** Ziyaretçi adını düzenler (ör. "Ali Veli"). */
+function NameEditor({ name, saving, onSave }: { name: string | null; saving: boolean; onSave: (v: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(name || "");
+  useEffect(() => setVal(name || ""), [name]);
+
+  if (!editing) {
+    return (
+      <div className="mb-3">
+        <div className="text-xs text-[var(--asana-text-secondary)] mb-0.5">Name</div>
+        <div className="flex items-center gap-2">
+          <span className="text-[var(--asana-text)] font-medium text-sm break-words">{name || "Unnamed visitor"}</span>
+          <button onClick={() => setEditing(true)} className="text-xs text-[var(--asana-blue)] hover:underline shrink-0">
+            edit
+          </button>
+        </div>
+      </div>
+    );
+  }
+  const commit = () => {
+    onSave(val);
+    setEditing(false);
+  };
+  return (
+    <div className="mb-3">
+      <div className="text-xs text-[var(--asana-text-secondary)] mb-0.5">Name</div>
+      <div className="flex items-center gap-1">
+        <input
+          autoFocus
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commit();
+            if (e.key === "Escape") setEditing(false);
+          }}
+          placeholder="e.g. Ali Veli"
+          className="flex-1 min-w-0 px-2 py-1 rounded border border-[var(--asana-border)] bg-transparent text-[var(--asana-text)] text-sm outline-none focus:border-[var(--asana-accent)]"
+        />
+        <button onClick={commit} disabled={saving} className="text-xs px-2 py-1 rounded bg-[var(--asana-accent)] text-white disabled:opacity-50">
+          {saving ? "…" : "Save"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Konuşma etiketlerini ekler/çıkarır. */
+function LabelEditor({ labels, onChange }: { labels: string[]; onChange: (l: string[]) => void }) {
+  const [val, setVal] = useState("");
+  const add = () => {
+    const t = val.trim().slice(0, 32);
+    if (!t || labels.includes(t) || labels.length >= 12) {
+      setVal("");
+      return;
+    }
+    onChange([...labels, t]);
+    setVal("");
+  };
+  return (
+    <div className="mb-1">
+      <div className="text-xs text-[var(--asana-text-secondary)] mb-1">Labels</div>
+      <div className="flex flex-wrap gap-1 mb-1.5">
+        {labels.map((l) => (
+          <span key={l} className="text-[11px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1" style={labelStyle(l)}>
+            {l}
+            <button onClick={() => onChange(labels.filter((x) => x !== l))} className="hover:opacity-70" title="Remove">
+              ×
+            </button>
+          </span>
+        ))}
+        {labels.length === 0 && <span className="text-xs text-[var(--asana-text-secondary)]">No labels</span>}
+      </div>
+      <input
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            add();
+          }
+        }}
+        placeholder="Add label + Enter"
+        className="w-full px-2 py-1 rounded border border-[var(--asana-border)] bg-transparent text-[var(--asana-text)] text-xs outline-none focus:border-[var(--asana-accent)]"
+      />
     </div>
   );
 }

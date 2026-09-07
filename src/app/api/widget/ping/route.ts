@@ -50,6 +50,11 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Sayfa değiştiyse navigasyon geçmişine kaydet
+    if (typeof currentUrl === "string" && currentUrl && currentUrl !== visitor.currentUrl) {
+      await prisma.pageView.create({ data: { visitorId: visitor.id, url: currentUrl } });
+    }
+
     const conversation = await prisma.conversation.findFirst({
       where: { visitorId: visitor.id, status: "OPEN" },
       orderBy: { lastMessageAt: "desc" },

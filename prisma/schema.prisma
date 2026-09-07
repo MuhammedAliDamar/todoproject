@@ -256,8 +256,20 @@ model Visitor {
   createdAt     DateTime       @default(now())
   website       Website        @relation(fields: [websiteId], references: [id], onDelete: Cascade)
   conversations Conversation[]
+  pageViews     PageView[]
 
   @@index([websiteId])
+}
+
+/// Ziyaretçinin gezdiği sayfalar (navigasyon geçmişi).
+model PageView {
+  id        String   @id @default(cuid())
+  visitorId String
+  url       String
+  createdAt DateTime @default(now())
+  visitor   Visitor  @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+
+  @@index([visitorId])
 }
 
 enum ConversationStatus {
@@ -271,6 +283,7 @@ model Conversation {
   visitorId      String
   status         ConversationStatus @default(OPEN)
   assignedUserId String?
+  labels         String[]           @default([]) // operatörün eklediği serbest etiketler (ör. "vip", "spam")
   lastMessageAt  DateTime           @default(now())
   visitorUnread  Int                @default(0) // ziyaretçinin okumadığı (operatör mesajı) sayısı
   operatorUnread Int                @default(0) // operatörün okumadığı (ziyaretçi mesajı) sayısı

@@ -42,6 +42,7 @@ export async function GET(req: NextRequest) {
         lastMessageAt: c.lastMessageAt,
         operatorUnread: c.operatorUnread,
         assignedUserId: c.assignedUserId,
+        labels: c.labels,
         website: c.website,
         visitor: {
           id: c.visitor.id,

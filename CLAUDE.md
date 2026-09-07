@@ -16,9 +16,18 @@ Embed script'li widget + operatör inbox'ı + ziyaretçi takibi. Realtime = SSE 
 - `Website` — bir site = bir chat kutusu. `publicKey` embed'de kullanılır. Widget ayarları: `color`, `welcomeMessage`, `operatorName`, `position` (right/left), `active`.
 - `Visitor` — `token` (kalıcı, localStorage `mt_token_<key>`), `online`/`lastSeenAt`, `timezone`+`language` (tarayıcıdan: `Intl...timeZone`, `navigator.language`), `country`/`city`, `currentUrl`, `referrer`, `ip`, `userAgent`.
   - **Konum saat diliminden türetilir** (`tzToLocation` in `src/lib/chat.ts`): IANA tz → şehir (son segment) + ülke (tablo/bölge). ip-api.com sadece tz yoksa yedek. Panel sağ tarafında tz + canlı yerel saat (`useLocalTime`) + dil gösterilir; sol listede şehir/ülke.
-- `Conversation` — `status` (OPEN/RESOLVED), `assignedUserId`, `operatorUnread`/`visitorUnread`, `lastMessageAt`.
+- `Conversation` — `status` (OPEN/RESOLVED), `assignedUserId`, `labels` (String[], operatörün serbest etiketleri), `operatorUnread`/`visitorUnread`, `lastMessageAt`.
 - `ChatMessage` — `sender` (VISITOR/OPERATOR), `userId` (operatör), `body`, `attachmentUrl`+`attachmentType` (resim eki, nullable), `readAt` (görüldü).
+- `PageView` — ziyaretçinin gezdiği sayfalar (`visitorId`, `url`, `createdAt`). Widget `session`/`ping`'te URL değişince kaydedilir (son kayıttan farklıysa). Detayda "Pages" sekmesinde zaman çizelgesi olarak gösterilir.
 - Silme yok: `Website` soft-delete (`deletedAt`).
+
+### Operatör verimlilik özellikleri
+- **Ziyaretçiyi yeniden adlandır:** `Visitor.name` düzenlenebilir (detay panelinde "edit"). PATCH `/api/chat/conversations/[id]` body `visitorName`. Kişi konuşmalar arası paylaşılır.
+- **Konuşma etiketleri:** `Conversation.labels` (serbest metin çipleri, ≤12, ≤32 karakter, tekilleştirilir). PATCH body `labels`. Listede + detayda renkli çip (`labelStyle` hash→hue).
+- **Çevrimiçi ziyaretçiler:** `GET /api/chat/visitors/online?websiteId=` → şu an sitede aktif (lastSeenAt < 45sn) ziyaretçiler, konuşma başlatmamış olsalar da. İnbox'ta "Online" toggle (15sn poll). Bir ziyaretçiye tıkla → `POST /api/chat/visitors/[id]/start` açık konuşmayı bulur/oluşturur → operatör ilk mesajı atabilir (widget SSE `visitorTopic`'ten alır).
+- **Site başına bekleyen mesaj:** `/api/chat/websites` GET her siteye `waiting` (OPEN konuşmalarda toplam `operatorUnread`) döndürür; site dropdown'da `Site (N)`, "All sites (toplam)".
+- **Canlı durum dairesi:** sohbet başlığında aktifse yeşil `animate-ping` daire "live on site", değilse gri "offline".
+- **Detay paneli:** başlıkta "Details" butonu (küçük ekranda overlay); iki sekme — Info (isim/etiket/konum/tz/dil/tarayıcı) ve Pages (sayfa geçmişi).
 
 ### Realtime (`src/lib/chatBus.ts`)
 In-memory EventEmitter (`globalThis` singleton). 3 topic:
