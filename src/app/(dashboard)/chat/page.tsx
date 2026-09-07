@@ -57,8 +57,18 @@ interface Detail {
     createdAt?: string;
     timezone?: string | null;
     language?: string | null;
+    note?: string | null;
   };
   messages: Msg[];
+}
+interface SearchResult {
+  conversationId: string;
+  status: Status;
+  website: { id: string; name: string; color: string };
+  visitor: { id: string; name: string | null; email: string | null };
+  snippet: string;
+  sender: "VISITOR" | "OPERATOR";
+  createdAt: string;
 }
 
 /** Verilen IANA saat dilimindeki güncel yerel saati (canlı) döndürür. */
@@ -114,8 +124,12 @@ export default function ChatPage() {
   const [showOnline, setShowOnline] = useState(false);
   const [online, setOnline] = useState<OnlineVisitor[]>([]);
   const [savingName, setSavingName] = useState(false);
+  const [savingNote, setSavingNote] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [detailTab, setDetailTab] = useState<"info" | "pages">("info");
+  const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
 
   const [uploadErr, setUploadErr] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -215,6 +229,26 @@ export default function ChatPage() {
     return () => clearInterval(iv);
   }, [showOnline, loadOnline, loadWebsites]);
 
+  // Konuşma içi arama (mesaj gövdesinde: order id, link vb.) — debounce'lu
+  useEffect(() => {
+    const q = search.trim();
+    if (q.length < 2) {
+      setSearchResults([]);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    const t = setTimeout(() => {
+      const params = new URLSearchParams({ q });
+      if (siteFilter) params.set("websiteId", siteFilter);
+      fetch(`/api/chat/search?${params.toString()}`)
+        .then((r) => (r.ok ? r.json() : []))
+        .then((d) => setSearchResults(Array.isArray(d) ? d : []))
+        .finally(() => setSearching(false));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search, siteFilter]);
+
   // Bir ziyaretçiyle konuşma başlat (çevrimiçi listesinden) ve aç
   const startWith = useCallback(
     async (visitorId: string, existing: string | null) => {
@@ -248,6 +282,22 @@ export default function ChatPage() {
       const nm = name.trim() || null;
       setDetail((d) => (d ? { ...d, visitor: { ...d.visitor, name: nm } } : d));
       setConvs((prev) => prev.map((c) => (c.id === selectedRef.current ? { ...c, visitor: { ...c.visitor, name: nm } } : c)));
+    }
+  }, []);
+
+  // Ziyaretçi notunu kaydet (kişiyi tanımak için, konuşmalar arası kalıcı)
+  const saveNote = useCallback(async (note: string) => {
+    if (!selectedRef.current) return;
+    setSavingNote(true);
+    const res = await fetch(`/api/chat/conversations/${selectedRef.current}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ visitorNote: note }),
+    });
+    setSavingNote(false);
+    if (res.ok) {
+      const nt = note.trim() || null;
+      setDetail((d) => (d ? { ...d, visitor: { ...d.visitor, note: nt } } : d));
     }
   }, []);
 
@@ -548,9 +598,73 @@ export default function ChatPage() {
               </option>
             ))}
           </select>
+          {/* Konuşma içi arama: order id / link vb. */}
+          <div className="relative mt-2">
+            <svg className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--asana-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
+            </svg>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search messages (order id, link…)"
+              className="w-full text-xs pl-8 pr-7 py-1.5 rounded-lg border border-[var(--asana-border)] bg-transparent text-[var(--asana-text)] outline-none focus:border-[var(--asana-accent)]"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--asana-text-secondary)] hover:text-[var(--asana-text)]"
+                title="Clear search"
+              >
+                ×
+              </button>
+            )}
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto">
-          {showOnline ? (
+          {search.trim().length >= 2 ? (
+            searching && searchResults.length === 0 ? (
+              <p className="p-4 text-sm text-[var(--asana-text-secondary)]">Searching…</p>
+            ) : searchResults.length === 0 ? (
+              <p className="p-4 text-sm text-[var(--asana-text-secondary)]">No messages match “{search.trim()}”.</p>
+            ) : (
+              <>
+                <p className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wide text-[var(--asana-text-secondary)]">
+                  {searchResults.length} conversation{searchResults.length > 1 ? "s" : ""}
+                </p>
+                {searchResults.map((r) => (
+                  <button
+                    key={r.conversationId}
+                    onClick={() => openConv(r.conversationId)}
+                    className={`w-full text-left px-3 py-3 border-b border-[var(--asana-border)] flex gap-3 items-start hover:bg-[var(--asana-bg)] ${
+                      selectedId === r.conversationId ? "bg-[var(--asana-bg)]" : ""
+                    }`}
+                  >
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-semibold shrink-0" style={{ background: r.website.color }}>
+                      {initials(r.visitor.name, r.visitor.id)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-sm text-[var(--asana-text)] truncate">
+                          {r.visitor.name || r.visitor.email || "Visitor #" + r.visitor.id.slice(-5)}
+                        </span>
+                        <span className="text-[10px] text-[var(--asana-text-secondary)] shrink-0">
+                          {r.status === "OPEN" ? "open" : "resolved"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[var(--asana-text-secondary)] break-words line-clamp-2">
+                        <span className="text-[var(--asana-text-secondary)]">{r.sender === "OPERATOR" ? "You: " : ""}</span>
+                        {r.snippet}
+                      </p>
+                      <span className="text-[10px] text-[var(--asana-text-secondary)] flex items-center gap-1 mt-0.5">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: r.website.color }} />
+                        <span className="font-medium">{r.website.name}</span>
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </>
+            )
+          ) : showOnline ? (
             online.length === 0 ? (
               <p className="p-4 text-sm text-[var(--asana-text-secondary)]">No visitors online right now.</p>
             ) : (
@@ -788,6 +902,9 @@ export default function ChatPage() {
               {/* Konuşma etiketleri */}
               <LabelEditor labels={detail.labels || []} onChange={saveLabels} />
 
+              {/* Ziyaretçi hakkında operatör notu */}
+              <NoteEditor key={detail.visitor.id + ":note"} note={detail.visitor.note ?? null} saving={savingNote} onSave={saveNote} />
+
               <dl className="space-y-3 text-sm mt-4">
                 <Info label="Email" value={detail.visitor.email || "—"} />
                 <Info
@@ -959,6 +1076,37 @@ function NameEditor({ name, saving, onSave }: { name: string | null; saving: boo
           {saving ? "…" : "Save"}
         </button>
       </div>
+    </div>
+  );
+}
+
+/** Ziyaretçi hakkında serbest operatör notu (kaydet ile kalıcı). */
+function NoteEditor({ note, saving, onSave }: { note: string | null; saving: boolean; onSave: (v: string) => void }) {
+  const [val, setVal] = useState(note || "");
+  useEffect(() => setVal(note || ""), [note]);
+  const dirty = (val.trim() || null) !== (note || null);
+  return (
+    <div className="mb-4">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs text-[var(--asana-text-secondary)]">Notes</span>
+        {dirty && (
+          <button
+            onClick={() => onSave(val)}
+            disabled={saving}
+            className="text-xs px-2 py-0.5 rounded bg-[var(--asana-accent)] text-white disabled:opacity-50"
+          >
+            {saving ? "…" : "Save"}
+          </button>
+        )}
+      </div>
+      <textarea
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={() => dirty && onSave(val)}
+        rows={3}
+        placeholder="Private notes about this visitor…"
+        className="w-full resize-y px-2 py-1.5 rounded border border-[var(--asana-border)] bg-transparent text-[var(--asana-text)] text-sm outline-none focus:border-[var(--asana-accent)] min-h-[60px]"
+      />
     </div>
   );
 }

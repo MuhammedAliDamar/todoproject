@@ -91,6 +91,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       await prisma.visitor.update({ where: { id: conv.visitorId }, data: { name: renamedTo } });
     }
 
+    // Ziyaretçi hakkında operatör notu (konuşmalar arası paylaşılır, kişiyi tanımak için)
+    let noteTo: string | null | undefined;
+    if (typeof b.visitorNote === "string" || b.visitorNote === null) {
+      noteTo = typeof b.visitorNote === "string" ? b.visitorNote.slice(0, 4000) || null : null;
+      await prisma.visitor.update({ where: { id: conv.visitorId }, data: { note: noteTo } });
+    }
+
     // Konuşma etiketleri (serbest metin, tekilleştirilir, kırpılır)
     if (Array.isArray(b.labels)) {
       data.labels = [
@@ -124,7 +131,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       conversation: { id: updated.id, status: updated.status, operatorUnread: updated.operatorUnread },
     });
 
-    return jsonResponse({ ok: true, status: updated.status, labels: updated.labels, visitorName: renamedTo });
+    return jsonResponse({ ok: true, status: updated.status, labels: updated.labels, visitorName: renamedTo, visitorNote: noteTo });
   } catch {
     return errorResponse("Server error", 500);
   }

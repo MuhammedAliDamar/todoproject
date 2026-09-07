@@ -23,13 +23,15 @@ Embed script'li widget + operatör inbox'ı + ziyaretçi takibi. Realtime = SSE 
 - Silme yok: `Website` soft-delete (`deletedAt`).
 
 ### Operatör verimlilik özellikleri
-- **Ziyaretçiyi yeniden adlandır:** `Visitor.name` düzenlenebilir (detay panelinde "edit"). PATCH `/api/chat/conversations/[id]` body `visitorName`. Kişi konuşmalar arası paylaşılır.
+- **Ziyaretçiyi yeniden adlandır:** `Visitor.name` düzenlenebilir (detay panelinde "edit"). PATCH `/api/chat/conversations/[id]` body `visitorName`. Kişi konuşmalar arası paylaşılır (sağdaki isim değişince sol liste de güncellenir).
+- **Ziyaretçi notu:** `Visitor.note` (String?, ≤4000). Detay panelinde "Notes" textarea (blur veya Save ile kaydeder). PATCH body `visitorNote`. Kişi hakkında özel notlar, konuşmalar arası kalıcı (müşteriyi tanımak için).
+- **Konuşma içi arama:** `GET /api/chat/search?q=&websiteId=` → mesaj gövdesinde `contains` (insensitive) arar, konuşma başına en yeni eşleşmeyi + snippet döndürür (order id / link bulmak için). İnbox üstünde arama kutusu (300ms debounce, ≥2 karakter); sonuçlar konuşma listesinin yerini alır, tıklayınca konuşma açılır.
 - **Konuşma etiketleri:** `Conversation.labels` (serbest metin çipleri, ≤12, ≤32 karakter, tekilleştirilir). PATCH body `labels`. Listede + detayda renkli çip (`labelStyle` hash→hue).
 - **Çevrimiçi ziyaretçiler:** `GET /api/chat/visitors/online?websiteId=` → şu an sitede aktif (lastSeenAt < 45sn) ziyaretçiler, konuşma başlatmamış olsalar da. İnbox'ta "Online" toggle (15sn poll). Bir ziyaretçiye tıkla → `POST /api/chat/visitors/[id]/start` açık konuşmayı bulur/oluşturur → operatör ilk mesajı atabilir (widget SSE `visitorTopic`'ten alır).
 - **Site başına bekleyen mesaj:** `/api/chat/websites` GET her siteye `waiting` (OPEN konuşmalarda toplam `operatorUnread`) döndürür; site dropdown'da `Site (N)`, "All sites (toplam)".
 - **Canlı durum dairesi:** sohbet başlığında aktifse yeşil `animate-ping` daire "live on site", değilse gri "offline". Liste avatar noktası da online'da pulse eder.
 - **Canlı presence (yenilemeden online/offline):** panel `presence` map'i (ziyaretçi→son görülme ms) tutar; 10sn tick ile yeniden hesaplanır → ping kesilince 45sn'de offline'a düşer (sayfa yenilemeden). SSE `visitor` event'i `online:true/false` ile presence'ı günceller ve açık konuşmanın başlığını anında değiştirir. Widget sekme kapanınca/gizlenince `navigator.sendBeacon` ile `ping {offline:true}` yollar (route `online=false` set edip `visitor online:false` publish eder); geri gelince tekrar ping atar. Liste/başlık/Status `onlineOf(id, lastSeenAt, fallback)` ile render edilir.
-- **Detay paneli:** başlıkta "Details" butonu (küçük ekranda overlay); iki sekme — Info (isim/etiket/konum/tz/dil/tarayıcı) ve Pages (sayfa geçmişi).
+- **Detay paneli:** başlıkta "Details" butonu (küçük ekranda overlay); iki sekme — Info (isim/not/etiket/konum/tz/dil/tarayıcı) ve Pages (sayfa geçmişi).
 
 ### Realtime (`src/lib/chatBus.ts`)
 In-memory EventEmitter (`globalThis` singleton). 3 topic:

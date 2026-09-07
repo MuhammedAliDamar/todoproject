@@ -242,6 +242,7 @@ model Visitor {
   token         String         @unique @default(cuid())
   websiteId     String
   name          String?
+  note          String?  // operatörün ziyaretçi hakkında aldığı özel notlar
   email         String?
   ip            String?
   userAgent     String?
