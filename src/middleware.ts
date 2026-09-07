@@ -7,6 +7,14 @@ const publicExactPaths = new Set(["/"]);
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Yüklenen dosyalar (kart ekleri): Next production'da public/'e runtime yazılan
+  // dosyaları statik sunmadığı için /uploads/<ad> isteklerini serve API route'una yönlendir.
+  // Eski DB kayıtları (/uploads/...) da böylece çalışır. (dot-check'ten ÖNCE olmalı.)
+  if (pathname.startsWith("/uploads/")) {
+    const name = pathname.slice("/uploads/".length);
+    return NextResponse.rewrite(new URL(`/api/media/file/${name}`, req.url));
+  }
+
   // Allow root (redirects to /login) and public paths
   if (publicExactPaths.has(pathname) || publicPaths.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();

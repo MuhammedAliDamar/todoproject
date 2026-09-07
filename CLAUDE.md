@@ -53,8 +53,11 @@ Hem ziyaretçi hem operatör mesaja **sadece resim** ekleyebilir. `src/lib/uploa
 ### Güvenlik (public endpoint sertleştirme)
 `src/lib/rateLimit.ts` — süreç-içi sabit-pencere rate limiter (tek instance fork için yeterli) + `cap()` girdi kırpma. Uygulanan limitler: `session` 40/dk (IP), `message` 20/dk (token)+40/dk (IP), `ping` 120/dk (token); aşınca 429. Mesaj gövdesi `MAX_MESSAGE_LEN=4000`. Session/ping alanları (currentUrl 2048, referrer 2048, timezone 64, language 32, userAgent 512) kırpılır. XSS yok (React text render), SQLi yok (Prisma), auth cookie httpOnly+sameSite=lax+secure. Not: domain/origin allowlist yok — widget iframe kendi origin'imizden çalıştığı için Origin kontrolü uygulanabilir değil; kötüye kullanım rate-limit ile sınırlanır.
 
+### Kart ekleri (yüklenen dosyalar)
+Kart ekleri `POST /api/upload` ile `public/uploads/<uuid><ext>`'e yazılır, `Attachment.url = /uploads/<ad>` olarak saklanır (PDF/doküman/resim; chat ekinden ayrı, magic-byte yok). **Sunum:** Next production'da `public/`'e runtime yazılan dosyaları statik sunmadığı için `/uploads/<ad>` istekleri middleware'de `GET /api/media/file/[name]` route'una **rewrite** edilir → dosya node app'ten stream edilir. Böylece **eski DB kayıtları da** (`/uploads/...`) çalışır; `/api/upload` ve görüntüleme kodu değişmedi. Ad kalıbı `^[a-f0-9-]{8,}\.<ext>$` + izinli uzantı whitelist ile sınırlı (traversal yok), `X-Content-Type-Options: nosniff` + `CSP: sandbox`. Kart ekleri **kalıcıdır** (chat resimlerindeki 24 saat ömür YOK).
+
 ### Middleware
-`/api/widget` ve `/widget` public path'lerde. Widget iframe cross-origin gömülebilsin diye public branch `X-Frame-Options` set etmez.
+`/api/widget` ve `/widget` public path'lerde. `/uploads/<ad>` → `/api/media/file/<ad>` rewrite (kart ekleri). Widget iframe cross-origin gömülebilsin diye public branch `X-Frame-Options` set etmez.
 
 ### Kurulum (müşteri sitesi)
 Panelden site ekle → embed kodunu kopyala → hedef sitenin `<head>`/`</body>` öncesine yapıştır:
