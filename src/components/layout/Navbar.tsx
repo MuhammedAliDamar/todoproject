@@ -4,12 +4,14 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
+import { useMobileNav } from "@/context/MobileNavContext";
 import Avatar from "@/components/ui/Avatar";
 import NotificationDropdown from "./NotificationDropdown";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { setOpen } = useMobileNav();
   const [showMenu, setShowMenu] = useState(false);
   const [search, setSearch] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
@@ -26,7 +28,17 @@ export default function Navbar() {
 
   return (
     <header className="bg-[var(--asana-bg-white)] dark:bg-[#2e2f31] border-b border-[var(--asana-border)] h-14 flex items-center px-4 justify-between sticky top-0 z-40">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
+        {/* Mobil: kenar çubuğunu aç */}
+        <button
+          onClick={() => setOpen(true)}
+          className="md:hidden p-2 -ml-1 text-[var(--asana-text-secondary)] hover:text-[var(--asana-text)] hover:bg-[var(--asana-bg)] dark:hover:bg-[#3a3b3d] rounded-lg transition"
+          title="Menu"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
         <Link href="/boards" className="flex items-center gap-2 hover:opacity-80 transition">
           <div className="w-8 h-8 bg-gradient-to-br from-[var(--asana-accent)] to-[#e8573a] rounded-lg flex items-center justify-center">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useMobileNav } from "@/context/MobileNavContext";
 import {
   DndContext,
   closestCenter,
@@ -82,8 +83,26 @@ function SortableBoardItem({ board, isActive }: { board: BoardItem; isActive: bo
   );
 }
 
+/** Ana gezinme linkleri (masaüstü + mobil drawer'da paylaşılır). */
+const NAV: { href: string; label: string; d: string }[] = [
+  { href: "/boards", label: "Home", d: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
+  { href: "/my-tasks", label: "My Tasks", d: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" },
+  { href: "/inbox", label: "Inbox", d: "M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" },
+  { href: "/chat", label: "Live Chat", d: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4-.8L3 20l1.3-3.9A7.96 7.96 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" },
+  { href: "/websites", label: "Websites", d: "M21 12a9 9 0 11-18 0 9 9 0 0118 0z M3.6 9h16.8 M3.6 15h16.8 M12 3a15 15 0 010 18 15 15 0 010-18z" },
+];
+
+function NavIcon({ d }: { d: string }) {
+  return (
+    <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={d} />
+    </svg>
+  );
+}
+
 export default function Sidebar() {
   const pathname = usePathname();
+  const { open, setOpen } = useMobileNav();
   const [boards, setBoards] = useState<BoardItem[]>([]);
   const [tasks, setTasks] = useState<TaskGroup[]>([]);
   const [collapsed, setCollapsed] = useState(false);
@@ -92,6 +111,11 @@ export default function Sidebar() {
   useEffect(() => {
     if (pathname === "/chat") setCollapsed(true);
   }, [pathname]);
+
+  // Rota değişince mobil drawer'ı kapat
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname, setOpen]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -127,219 +151,166 @@ export default function Sidebar() {
 
   const myTaskCount = tasks.reduce((sum, g) => sum + g.cards.length, 0);
 
-  if (collapsed) {
-    return (
-      <aside className="w-[52px] bg-[var(--asana-sidebar)] min-h-[calc(100vh-3.5rem)] flex flex-col items-center py-4 hidden md:flex">
-        <button
-          onClick={() => setCollapsed(false)}
-          className="p-2 text-[var(--asana-sidebar-text)] hover:text-[var(--asana-sidebar-text-active)] hover:bg-[var(--asana-sidebar-hover)] rounded-lg transition mb-4"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-          </svg>
-        </button>
-        <Link
-          href="/boards"
-          className={`p-2 rounded-lg transition mb-1 ${
-            pathname === "/boards"
-              ? "bg-[var(--asana-sidebar-active)] text-[var(--asana-sidebar-text-active)]"
-              : "text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)]"
-          }`}
-          title="Home"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-          </svg>
-        </Link>
-        <Link
-          href="/my-tasks"
-          className={`p-2 rounded-lg transition mb-1 ${
-            pathname === "/my-tasks"
-              ? "bg-[var(--asana-sidebar-active)] text-[var(--asana-sidebar-text-active)]"
-              : "text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)]"
-          }`}
-          title="My Tasks"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-          </svg>
-        </Link>
-        <Link
-          href="/inbox"
-          className={`p-2 rounded-lg transition mb-1 ${
-            pathname === "/inbox"
-              ? "bg-[var(--asana-sidebar-active)] text-[var(--asana-sidebar-text-active)]"
-              : "text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)]"
-          }`}
-          title="Inbox"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-          </svg>
-        </Link>
-        <Link
-          href="/chat"
-          className={`p-2 rounded-lg transition mb-1 ${
-            pathname === "/chat"
-              ? "bg-[var(--asana-sidebar-active)] text-[var(--asana-sidebar-text-active)]"
-              : "text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)]"
-          }`}
-          title="Live Chat"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4-.8L3 20l1.3-3.9A7.96 7.96 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-          </svg>
-        </Link>
-        <Link
-          href="/websites"
-          className={`p-2 rounded-lg transition mb-1 ${
-            pathname === "/websites"
-              ? "bg-[var(--asana-sidebar-active)] text-[var(--asana-sidebar-text-active)]"
-              : "text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)]"
-          }`}
-          title="Websites"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z M3.6 9h16.8 M3.6 15h16.8 M12 3a15 15 0 010 18 15 15 0 010-18z" />
-          </svg>
-        </Link>
-      </aside>
-    );
-  }
-
-  return (
-    <aside className="w-[240px] bg-[var(--asana-sidebar)] min-h-[calc(100vh-3.5rem)] flex flex-col hidden md:flex">
-      {/* Top nav */}
-      <div className="px-3 pt-4 pb-2">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs font-semibold uppercase tracking-wider text-[var(--asana-sidebar-text)]">
-            Navigation
-          </span>
-          <button
-            onClick={() => setCollapsed(true)}
-            className="p-1 text-[var(--asana-sidebar-text)] hover:text-[var(--asana-sidebar-text-active)] hover:bg-[var(--asana-sidebar-hover)] rounded transition"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-            </svg>
-          </button>
-        </div>
-
-        <nav className="space-y-0.5 mt-2">
+  // Ana nav (masaüstü genişletilmiş + mobil drawer ortak)
+  const mainNav = (onNavigate?: () => void) => (
+    <nav className="space-y-0.5">
+      {NAV.map((item) => {
+        const active = pathname === item.href;
+        return (
           <Link
-            href="/boards"
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
             className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              pathname === "/boards"
+              active
                 ? "bg-[var(--asana-sidebar-active)] text-[var(--asana-sidebar-text-active)]"
                 : "text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)] hover:text-[var(--asana-sidebar-text-active)]"
             }`}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-            Home
-          </Link>
-
-          <Link
-            href="/my-tasks"
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              pathname === "/my-tasks"
-                ? "bg-[var(--asana-sidebar-active)] text-[var(--asana-sidebar-text-active)]"
-                : "text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)] hover:text-[var(--asana-sidebar-text-active)]"
-            }`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-            </svg>
-            My Tasks
-            {myTaskCount > 0 && (
+            <NavIcon d={item.d} />
+            {item.label}
+            {item.href === "/my-tasks" && myTaskCount > 0 && (
               <span className="ml-auto bg-[var(--asana-accent)] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                 {myTaskCount}
               </span>
             )}
           </Link>
+        );
+      })}
+    </nav>
+  );
 
-          <Link
-            href="/inbox"
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              pathname === "/inbox"
-                ? "bg-[var(--asana-sidebar-active)] text-[var(--asana-sidebar-text-active)]"
-                : "text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)] hover:text-[var(--asana-sidebar-text-active)]"
-            }`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-            </svg>
-            Inbox
-          </Link>
-
-          <Link
-            href="/chat"
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              pathname === "/chat"
-                ? "bg-[var(--asana-sidebar-active)] text-[var(--asana-sidebar-text-active)]"
-                : "text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)] hover:text-[var(--asana-sidebar-text-active)]"
-            }`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4-.8L3 20l1.3-3.9A7.96 7.96 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-            Live Chat
-          </Link>
-
-          <Link
-            href="/websites"
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              pathname === "/websites"
-                ? "bg-[var(--asana-sidebar-active)] text-[var(--asana-sidebar-text-active)]"
-                : "text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)] hover:text-[var(--asana-sidebar-text-active)]"
-            }`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z M3.6 9h16.8 M3.6 15h16.8 M12 3a15 15 0 010 18 15 15 0 010-18z" />
-            </svg>
-            Websites
-          </Link>
-        </nav>
+  const projectsSection = (onNavigate?: () => void) => (
+    <div className="px-3 flex-1 overflow-y-auto">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-semibold uppercase tracking-wider text-[var(--asana-sidebar-text)]">
+          Projects
+        </span>
+        <Link
+          href="/boards"
+          onClick={onNavigate}
+          className="p-1 text-[var(--asana-sidebar-text)] hover:text-[var(--asana-sidebar-text-active)] hover:bg-[var(--asana-sidebar-hover)] rounded transition"
+          title="Create project"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+        </Link>
       </div>
 
-      {/* Divider */}
-      <div className="mx-3 my-2 border-t border-[#424244]" />
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={boards.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+          <nav className="space-y-0.5">
+            {boards.map((board) => (
+              <SortableBoardItem
+                key={board.id}
+                board={board}
+                isActive={pathname === `/board/${board.id}`}
+              />
+            ))}
+            {boards.length === 0 && (
+              <p className="px-3 py-2 text-sm text-[var(--asana-sidebar-text)]">No projects yet</p>
+            )}
+          </nav>
+        </SortableContext>
+      </DndContext>
+    </div>
+  );
 
-      {/* Projects */}
-      <div className="px-3 flex-1 overflow-y-auto">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-[var(--asana-sidebar-text)]">
-            Projects
-          </span>
-          <Link
-            href="/boards"
-            className="p-1 text-[var(--asana-sidebar-text)] hover:text-[var(--asana-sidebar-text-active)] hover:bg-[var(--asana-sidebar-hover)] rounded transition"
-            title="Create project"
+  return (
+    <>
+      {/* Masaüstü: daraltılmış */}
+      {collapsed ? (
+        <aside className="w-[52px] bg-[var(--asana-sidebar)] min-h-[calc(100vh-3.5rem)] flex-col items-center py-4 hidden md:flex">
+          <button
+            onClick={() => setCollapsed(false)}
+            className="p-2 text-[var(--asana-sidebar-text)] hover:text-[var(--asana-sidebar-text-active)] hover:bg-[var(--asana-sidebar-hover)] rounded-lg transition mb-4"
+            title="Expand"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
             </svg>
-          </Link>
-        </div>
+          </button>
+          {NAV.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              title={item.label}
+              className={`p-2 rounded-lg transition mb-1 ${
+                pathname === item.href
+                  ? "bg-[var(--asana-sidebar-active)] text-[var(--asana-sidebar-text-active)]"
+                  : "text-[var(--asana-sidebar-text)] hover:bg-[var(--asana-sidebar-hover)]"
+              }`}
+            >
+              <NavIcon d={item.d} />
+            </Link>
+          ))}
+        </aside>
+      ) : (
+        /* Masaüstü: genişletilmiş */
+        <aside className="w-[240px] bg-[var(--asana-sidebar)] min-h-[calc(100vh-3.5rem)] flex-col hidden md:flex">
+          <div className="px-3 pt-4 pb-2">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[var(--asana-sidebar-text)]">
+                Navigation
+              </span>
+              <button
+                onClick={() => setCollapsed(true)}
+                className="p-1 text-[var(--asana-sidebar-text)] hover:text-[var(--asana-sidebar-text-active)] hover:bg-[var(--asana-sidebar-hover)] rounded transition"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                </svg>
+              </button>
+            </div>
+            <div className="mt-2">{mainNav()}</div>
+          </div>
 
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={boards.map((b) => b.id)} strategy={verticalListSortingStrategy}>
-            <nav className="space-y-0.5">
-              {boards.map((board) => (
-                <SortableBoardItem
-                  key={board.id}
-                  board={board}
-                  isActive={pathname === `/board/${board.id}`}
-                />
-              ))}
-              {boards.length === 0 && (
-                <p className="px-3 py-2 text-sm text-[var(--asana-sidebar-text)]">No projects yet</p>
-              )}
-            </nav>
-          </SortableContext>
-        </DndContext>
+          <div className="mx-3 my-2 border-t border-[#424244]" />
+
+          {projectsSection()}
+        </aside>
+      )}
+
+      {/* Mobil: off-canvas drawer (hamburger ile açılır) */}
+      <div
+        className={`md:hidden fixed inset-0 z-50 ${open ? "" : "pointer-events-none"}`}
+        aria-hidden={!open}
+      >
+        <div
+          className={`absolute inset-0 bg-black/40 transition-opacity duration-200 ${
+            open ? "opacity-100" : "opacity-0"
+          }`}
+          onClick={() => setOpen(false)}
+        />
+        <aside
+          className={`absolute left-0 top-0 bottom-0 w-[260px] max-w-[80vw] bg-[var(--asana-sidebar)] flex flex-col shadow-2xl transition-transform duration-200 ${
+            open ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <div className="px-3 pt-4 pb-2">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[var(--asana-sidebar-text)]">
+                Navigation
+              </span>
+              <button
+                onClick={() => setOpen(false)}
+                className="p-1 text-[var(--asana-sidebar-text)] hover:text-[var(--asana-sidebar-text-active)] hover:bg-[var(--asana-sidebar-hover)] rounded transition"
+                title="Close"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="mt-2">{mainNav(() => setOpen(false))}</div>
+          </div>
+
+          <div className="mx-3 my-2 border-t border-[#424244]" />
+
+          {projectsSection(() => setOpen(false))}
+        </aside>
       </div>
-    </aside>
+    </>
   );
 }

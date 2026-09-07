@@ -52,6 +52,8 @@ Yardımcılar `src/lib/chat.ts`: `getClientIp`, `enrichVisitorGeo` (fire-and-for
 - **Site kullanıcı tanımlama:** `WebsiteMember` (soft-delete). Erişim kontrolü `src/lib/chat.ts` → `getAccessibleWebsiteIds`/`canAccessWebsite`/`isWebsiteOwner` (sahip VEYA atanmış üye). Üye atama /chat içindeki Siteler modalından (`MembersManager`, e-posta ile).
 - **Siteye göre kategorize:** inbox'ta site dropdown filtresi; konuşma listesinde renkli site rozeti + isim.
 - Sidebar'a "Canlı Destek" (`/chat`) ve "Web Siteleri" (`/websites`) linkleri; `/chat`'te sidebar varsayılan **kapalı** (geniş 3-pane).
+- **Chat responsive:** `100dvh` + flex `min-h-0`/`shrink-0` → mesaj gövdesi scroll, yanıt kutusu altta sabit. Mobilde tek panel: liste tam genişlik, konuşma açılınca mesaj paneline geçer (geri oku), detay overlay. `md+` üç panel yan yana.
+- **Mobil gezinme:** Sidebar `md` altında gizli; Navbar'da hamburger (`md:hidden`) → off-canvas drawer. Ortak durum `src/context/MobileNavContext.tsx` (`MobileNavProvider` dashboard layout'unda; `useMobileNav`). Nav linkleri `Sidebar.tsx` içinde `NAV` dizisinde tekilleştirildi (masaüstü collapsed/expanded + drawer paylaşır). Drawer rota değişince/backdrop/X ile kapanır.
 
 ### Resim eki (güvenli)
 Hem ziyaretçi hem operatör mesaja **sadece resim** ekleyebilir. `src/lib/upload.ts`:

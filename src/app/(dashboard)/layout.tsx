@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
+import { MobileNavProvider } from "@/context/MobileNavContext";
 import Navbar from "@/components/layout/Navbar";
 import Sidebar from "@/components/layout/Sidebar";
 
@@ -19,12 +20,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="min-h-screen bg-[var(--asana-bg)]">
-      <Navbar />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 overflow-hidden">{children}</main>
+    <MobileNavProvider>
+      <div className="min-h-screen bg-[var(--asana-bg)]">
+        <Navbar />
+        <div className="flex">
+          <Sidebar />
+          <main className="flex-1 overflow-hidden min-w-0">{children}</main>
+        </div>
       </div>
-    </div>
+    </MobileNavProvider>
   );
 }
