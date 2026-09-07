@@ -67,6 +67,7 @@ interface SearchResult {
   website: { id: string; name: string; color: string };
   visitor: { id: string; name: string | null; email: string | null };
   snippet: string;
+  match?: "visitor" | "message";
   sender: "VISITOR" | "OPERATOR";
   createdAt: string;
 }
@@ -651,10 +652,17 @@ export default function ChatPage() {
                           {r.status === "OPEN" ? "open" : "resolved"}
                         </span>
                       </div>
-                      <p className="text-xs text-[var(--asana-text-secondary)] break-words line-clamp-2">
-                        <span className="text-[var(--asana-text-secondary)]">{r.sender === "OPERATOR" ? "You: " : ""}</span>
-                        {r.snippet}
-                      </p>
+                      {r.match === "visitor" && (
+                        <span className="inline-block text-[9px] px-1.5 py-0.5 rounded-full bg-[var(--asana-accent)]/10 text-[var(--asana-accent)] font-medium mt-0.5">
+                          matches person
+                        </span>
+                      )}
+                      {r.snippet && (
+                        <p className="text-xs text-[var(--asana-text-secondary)] break-words line-clamp-2">
+                          <span className="text-[var(--asana-text-secondary)]">{r.sender === "OPERATOR" ? "You: " : ""}</span>
+                          {r.snippet}
+                        </p>
+                      )}
                       <span className="text-[10px] text-[var(--asana-text-secondary)] flex items-center gap-1 mt-0.5">
                         <span className="w-2 h-2 rounded-full shrink-0" style={{ background: r.website.color }} />
                         <span className="font-medium">{r.website.name}</span>
