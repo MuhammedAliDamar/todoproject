@@ -21,7 +21,7 @@
     window.MARKTASKS_WEBSITE_ID;
 
   if (!websiteId) {
-    console.error("[marktasks] websiteId bulunamadı — script tag'e data-website ekleyin.");
+    console.error("[marktasks] websiteId not found — add data-website to the script tag.");
     return;
   }
 

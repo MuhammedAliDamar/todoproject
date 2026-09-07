@@ -105,9 +105,9 @@ export async function POST(req: NextRequest) {
     );
 
     const errors: Record<string, string> = {};
-    if (!title) errors.title_block = "Başlık gerekli";
-    if (!boardId) errors.board_block = "Board seçin";
-    else if (!listId) errors.board_block = "Bu board'da liste yok — başka board seçin";
+    if (!title) errors.title_block = "Title is required";
+    if (!boardId) errors.board_block = "Select a board";
+    else if (!listId) errors.board_block = "This board has no lists — pick another board";
     if (Object.keys(errors).length) {
       return NextResponse.json({ response_action: "errors", errors });
     }
@@ -181,7 +181,7 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           channel: meta.channelId,
           user: payload.user.id,
-          text: `✅ Görev oluşturuldu: *${card.title}* → _${list?.title}_ (${list?.board.title})\n<${appUrl}/board/${list?.board.id}|Board'u aç>`,
+          text: `✅ Task created: *${card.title}* → _${list?.title}_ (${list?.board.title})\n<${appUrl}/board/${list?.board.id}|Open board>`,
         }),
       }).catch(() => {});
     }

@@ -18,7 +18,7 @@ export async function sendMail(to: string, subject: string, html: string) {
 
   // SMTP yapılandırılmamışsa (örn. local) e-postayı konsola düş
   if (!transport) {
-    console.log("\n[mail:dev] SMTP yok — e-posta gönderilmedi. İçerik:");
+    console.log("\n[mail:dev] No SMTP configured — email not sent. Content:");
     console.log(`  to: ${to}\n  subject: ${subject}\n  html: ${html}\n`);
     return;
   }

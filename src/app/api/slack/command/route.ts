@@ -29,11 +29,11 @@ export async function POST(req: NextRequest) {
   const text = (params.get("text") || "").trim();
 
   const token = await getWorkspaceToken(teamId);
-  if (!token) return ephemeral("⚠️ Slack bağlantısı bulunamadı. Önce uygulamadan Slack'i bağlayın.");
+  if (!token) return ephemeral("⚠️ Slack connection not found. Connect Slack from the app first.");
 
   const userId = slackUserId ? await resolveAppUserId(slackUserId, token) : null;
   if (!userId) {
-    return ephemeral("⚠️ Slack hesabınız bir marktasks kullanıcısına bağlı değil (email eşleşmedi).");
+    return ephemeral("⚠️ Your Slack account isn't linked to a marktasks user (email didn't match).");
   }
 
   const boards = await prisma.board.findMany({
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     select: { id: true, title: true },
     take: 100,
   });
-  if (!boards.length) return ephemeral("⚠️ Hiç board'unuz yok.");
+  if (!boards.length) return ephemeral("⚠️ You don't have any boards.");
 
   const view = buildTaskModal({ userId, channelId, boards, titleValue: text || undefined });
 
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
   const data = await res.json();
   if (!data.ok) {
     console.error("views.open error:", data.error);
-    return ephemeral(`⚠️ Modal açılamadı: ${data.error}`);
+    return ephemeral(`⚠️ Couldn't open the modal: ${data.error}`);
   }
 
   return new NextResponse(null, { status: 200 });

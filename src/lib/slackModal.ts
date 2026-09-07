@@ -16,7 +16,7 @@ interface BuildArgs {
 }
 
 /**
- * Builds the "Yeni Görev" modal. Reused for views.open and views.update.
+ * Builds the "New Task" modal. Reused for views.open and views.update.
  * List + label selects are board-specific, so they're only added once a board is chosen.
  */
 export function buildTaskModal({
@@ -38,10 +38,10 @@ export function buildTaskModal({
       element: {
         type: "plain_text_input",
         action_id: "title",
-        placeholder: { type: "plain_text", text: "Görev başlığı" },
+        placeholder: { type: "plain_text", text: "Task title" },
         ...(titleValue ? { initial_value: titleValue } : {}),
       },
-      label: { type: "plain_text", text: "Görev" },
+      label: { type: "plain_text", text: "Task" },
     },
     {
       type: "input",
@@ -51,10 +51,10 @@ export function buildTaskModal({
         type: "plain_text_input",
         action_id: "desc",
         multiline: true,
-        placeholder: { type: "plain_text", text: "Açıklama (opsiyonel)" },
+        placeholder: { type: "plain_text", text: "Description (optional)" },
         ...(descValue ? { initial_value: descValue } : {}),
       },
-      label: { type: "plain_text", text: "Açıklama" },
+      label: { type: "plain_text", text: "Description" },
     },
     {
       type: "input",
@@ -63,7 +63,7 @@ export function buildTaskModal({
       element: {
         type: "static_select",
         action_id: "board",
-        placeholder: { type: "plain_text", text: "Board seç" },
+        placeholder: { type: "plain_text", text: "Select a board" },
         options: boards.map((b) => opt(b.title, b.id)),
         ...(selectedBoard ? { initial_option: opt(selectedBoard.title, selectedBoard.id) } : {}),
       },
@@ -79,17 +79,17 @@ export function buildTaskModal({
         element: {
           type: "static_select",
           action_id: "list",
-          placeholder: { type: "plain_text", text: "Liste seç" },
+          placeholder: { type: "plain_text", text: "Select a list" },
           options: lists.map((l) => opt(l.title, l.id)),
           initial_option: opt(lists[0].title, lists[0].id),
         },
-        label: { type: "plain_text", text: "Liste" },
+        label: { type: "plain_text", text: "List" },
       });
     } else {
       blocks.push({
         type: "section",
         block_id: "no_list",
-        text: { type: "mrkdwn", text: "_Bu board'da liste yok — başka board seçin._" },
+        text: { type: "mrkdwn", text: "_This board has no lists — pick another board._" },
       });
     }
 
@@ -101,16 +101,16 @@ export function buildTaskModal({
         element: {
           type: "multi_static_select",
           action_id: "assignees",
-          placeholder: { type: "plain_text", text: "Kişi ata (opsiyonel)" },
+          placeholder: { type: "plain_text", text: "Assign people (optional)" },
           options: members.map((m) => opt(m.name, m.id)),
         },
-        label: { type: "plain_text", text: "Atananlar" },
+        label: { type: "plain_text", text: "Assignees" },
       });
     }
   } else {
     blocks.push({
       type: "context",
-      elements: [{ type: "mrkdwn", text: "Board seçince liste ve üyeler yüklenir." }],
+      elements: [{ type: "mrkdwn", text: "Lists and members load once you pick a board." }],
     });
   }
 
@@ -118,9 +118,9 @@ export function buildTaskModal({
     type: "modal" as const,
     callback_id: "create_task",
     private_metadata: JSON.stringify({ userId, channelId }),
-    title: { type: "plain_text", text: "Yeni Görev" },
-    submit: { type: "plain_text", text: "Oluştur" },
-    close: { type: "plain_text", text: "İptal" },
+    title: { type: "plain_text", text: "New Task" },
+    submit: { type: "plain_text", text: "Create" },
+    close: { type: "plain_text", text: "Cancel" },
     blocks,
   };
 }
