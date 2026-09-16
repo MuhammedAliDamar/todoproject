@@ -46,6 +46,11 @@ function WidgetInner() {
   const [operatorTyping, setOperatorTyping] = useState(false);
   const [unread, setUnread] = useState(0);
   const [convId, setConvId] = useState<string | null>(null);
+  // Ziyaretçi e-postası (yoksa sohbet üstünde toplama kartı gösterilir)
+  const [email, setEmail] = useState<string | null>(null);
+  const [emailInput, setEmailInput] = useState("");
+  const [emailErr, setEmailErr] = useState<string | null>(null);
+  const [savingEmail, setSavingEmail] = useState(false);
 
   const [uploadErr, setUploadErr] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -96,6 +101,7 @@ function WidgetInner() {
         if (!data) return;
         setConfig(data.config);
         setToken(data.visitor.token);
+        setEmail(data.visitor.email || null);
         localStorage.setItem(`mt_token_${key}`, data.visitor.token);
         setMessages(data.messages || []);
         setConvId(data.conversation?.id || null);
@@ -292,6 +298,24 @@ function WidgetInner() {
     }
   };
 
+  const saveEmail = async () => {
+    const v = emailInput.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) {
+      setEmailErr("Please enter a valid email");
+      return;
+    }
+    if (!key || !token) return;
+    setSavingEmail(true);
+    const res = await post("/api/widget/identify", { publicKey: key, token, email: v });
+    setSavingEmail(false);
+    if (res.ok) {
+      setEmail(v);
+      setEmailErr(null);
+    } else {
+      setEmailErr("Could not save, please try again");
+    }
+  };
+
   const onInputChange = (v: string) => {
     setInput(v);
     const now = Date.now();
@@ -340,6 +364,35 @@ function WidgetInner() {
             <Bubble side="left" color={color} name={opName}>
               {config.welcomeMessage}
             </Bubble>
+          )}
+          {/* E-posta toplama (yoksa) */}
+          {token && !email && (
+            <div style={emailCard}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#1e1f21", marginBottom: 4 }}>
+                Get a reply by email
+              </div>
+              <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8 }}>
+                Leave your email so we can reach you even if you leave this page.
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <input
+                  type="email"
+                  value={emailInput}
+                  onChange={(e) => setEmailInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), saveEmail())}
+                  placeholder="you@example.com"
+                  style={emailInputStyle}
+                />
+                <button
+                  onClick={saveEmail}
+                  disabled={savingEmail}
+                  style={{ ...emailBtn, background: color, opacity: savingEmail ? 0.6 : 1 }}
+                >
+                  {savingEmail ? "…" : "Save"}
+                </button>
+              </div>
+              {emailErr && <div style={{ fontSize: 11, color: "#ef4444", marginTop: 4 }}>{emailErr}</div>}
+            </div>
           )}
           {messages.map((m) => (
             <Bubble
@@ -641,5 +694,34 @@ const brand: React.CSSProperties = {
   fontSize: 10,
   color: "#adb5bd",
   padding: "4px 0 8px",
+  flexShrink: 0,
+};
+const emailCard: React.CSSProperties = {
+  background: "#fff",
+  border: "1px solid #eceef1",
+  borderRadius: 12,
+  padding: 12,
+  marginBottom: 12,
+  boxShadow: "0 1px 3px rgba(0,0,0,.05)",
+};
+const emailInputStyle: React.CSSProperties = {
+  flex: 1,
+  minWidth: 0,
+  border: "1px solid #e2e5e9",
+  borderRadius: 8,
+  outline: "none",
+  fontSize: 13,
+  padding: "8px 10px",
+  color: "#1e1f21",
+  background: "#fff",
+};
+const emailBtn: React.CSSProperties = {
+  border: "none",
+  borderRadius: 8,
+  color: "#fff",
+  fontSize: 13,
+  fontWeight: 600,
+  padding: "8px 14px",
+  cursor: "pointer",
   flexShrink: 0,
 };

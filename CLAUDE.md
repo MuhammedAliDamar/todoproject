@@ -43,7 +43,8 @@ Yardımcılar `src/lib/chat.ts`: `getClientIp`, `enrichVisitorGeo` (fire-and-for
 ### Widget (herkese açık, auth yok)
 - `public/widget.js` — embed loader. Tek `<iframe>` enjekte eder (`ORIGIN/widget?key=<publicKey>`), kapalı 92×92 baloncuk / açık 400×660 panel. postMessage ile boyut/konum. JS API: `$marktasks.open()/.close()`. Site id: `window.$marktasks.websiteId` veya `data-website`.
 - `src/app/widget/page.tsx` — iframe içi chat UI (inline stil, tam izole). Session → SSE → heartbeat(30sn) → typing/seen. Body şeffaf yapılır.
-- API (`src/app/api/widget/*`): `session` (ziyaretçi tanı/oluştur + geçmiş), `message` (mesaj gönder, açık konuşma yoksa aç), `stream` (SSE, `?key&token`), `ping` (heartbeat + `typing`/`read` flag).
+- API (`src/app/api/widget/*`): `session` (ziyaretçi tanı/oluştur + geçmiş), `message` (mesaj gönder, açık konuşma yoksa aç), `stream` (SSE, `?key&token`), `ping` (heartbeat + `typing`/`read` flag), `identify` (POST `{email, name?}` → e-posta doğrula+kaydet, operatöre `visitor` event publish).
+- **E-posta toplama:** ziyaretçinin `email`'i yoksa widget'ta sohbetin üstünde engellemeyen bir kart ("Get a reply by email") gösterilir; geçerli e-posta girilince `identify`'a kaydedilir, kart kaybolur. İsim yalnızca operatör önceden atamadıysa güncellenir.
 
 ### Operatör paneli (auth: middleware `x-user-id`)
 - `src/app/(dashboard)/chat/page.tsx` — 3-pane inbox (konuşma listesi / mesaj akışı / ziyaretçi detayı). SSE `/api/chat/stream`, optimistic gönderim, typing, görüldü, çöz/yeniden aç.
