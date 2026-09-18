@@ -32,6 +32,7 @@ Embed script'li widget + operatör inbox'ı + ziyaretçi takibi. Realtime = SSE 
 - **Canlı durum dairesi:** sohbet başlığında aktifse yeşil `animate-ping` daire "live on site", değilse gri "offline". Liste avatar noktası da online'da pulse eder.
 - **Canlı presence (yenilemeden online/offline):** panel `presence` map'i (ziyaretçi→son görülme ms) tutar; 10sn tick ile yeniden hesaplanır → ping kesilince 45sn'de offline'a düşer (sayfa yenilemeden). SSE `visitor` event'i `online:true/false` ile presence'ı günceller ve açık konuşmanın başlığını anında değiştirir. Widget sekme kapanınca/gizlenince `navigator.sendBeacon` ile `ping {offline:true}` yollar (route `online=false` set edip `visitor online:false` publish eder); geri gelince tekrar ping atar. Liste/başlık/Status `onlineOf(id, lastSeenAt, fallback)` ile render edilir.
 - **Detay paneli:** başlıkta "Details" butonu (küçük ekranda overlay); iki sekme — Info (isim/not/etiket/konum/tz/dil/tarayıcı) ve Pages (sayfa geçmişi).
+- **Okunmadı işaretle:** başlıkta "Unread" butonu → PATCH `{unread:true}` (son ziyaretçi mesajının `readAt`'ini null yapar + `operatorUnread=max(1,mevcut)`); konuşmadan çıkıp inbox'a döner, rozet geri gelir. `{read:true}` tersi (açınca otomatik).
 
 ### Realtime (`src/lib/chatBus.ts`)
 In-memory EventEmitter (`globalThis` singleton). 3 topic:

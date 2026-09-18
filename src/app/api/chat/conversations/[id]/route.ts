@@ -110,6 +110,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ].slice(0, 12);
     }
 
+    // Operatör konuşmayı "okunmadı" işaretledi → inbox rozeti geri gelsin
+    if (b.unread === true) {
+      // Son ziyaretçi mesajını okunmadıya çevir (rozet + gerçek okunmamış durum)
+      const lastVisitorMsg = await prisma.chatMessage.findFirst({
+        where: { conversationId: id, sender: "VISITOR" },
+        orderBy: { createdAt: "desc" },
+        select: { id: true },
+      });
+      if (lastVisitorMsg) {
+        await prisma.chatMessage.update({ where: { id: lastVisitorMsg.id }, data: { readAt: null } });
+      }
+      data.operatorUnread = Math.max(1, conv.operatorUnread);
+    }
+
     // Operatör konuşmayı açtı → ziyaretçi mesajlarını okundu say
     if (b.read === true) {
       await prisma.chatMessage.updateMany({

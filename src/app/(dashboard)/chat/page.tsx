@@ -506,6 +506,22 @@ export default function ChatPage() {
     }
   };
 
+  // Konuşmayı "okunmadı" işaretle → inbox'a dön, rozet geri gelsin
+  const markUnread = async () => {
+    if (!detail) return;
+    const id = detail.id;
+    await fetch(`/api/chat/conversations/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ unread: true }),
+    });
+    setConvs((prev) => prev.map((c) => (c.id === id ? { ...c, operatorUnread: Math.max(1, c.operatorUnread) } : c)));
+    loadWebsites(); // bekleyen sayıları güncelle
+    setSelectedId(null);
+    setDetail(null);
+    setPanelOpen(false);
+  };
+
   const toggleStatus = async () => {
     if (!detail) return;
     const next: Status = detail.status === "OPEN" ? "RESOLVED" : "OPEN";
@@ -813,6 +829,16 @@ export default function ChatPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <span className="hidden sm:inline">Details</span>
+                </button>
+                <button
+                  onClick={markUnread}
+                  className="text-xs px-2 sm:px-3 py-1.5 rounded-lg font-medium bg-[var(--asana-bg)] text-[var(--asana-text-secondary)] hover:bg-[var(--asana-border)] flex items-center gap-1"
+                  title="Mark as unread"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  <span className="hidden sm:inline">Unread</span>
                 </button>
                 <button
                   onClick={toggleStatus}
