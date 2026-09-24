@@ -301,6 +301,11 @@ function WidgetInner() {
 
   const saveEmail = async () => {
     const v = emailInput.trim();
+    const ord = orderNoInput.trim();
+    if (!ord) {
+      setEmailErr("Please enter your order number");
+      return;
+    }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) {
       setEmailErr("Please enter a valid email");
       return;
@@ -311,7 +316,7 @@ function WidgetInner() {
       publicKey: key,
       token,
       email: v,
-      orderNo: orderNoInput.trim() || undefined,
+      orderNo: ord,
     });
     setSavingEmail(false);
     if (res.ok) {
@@ -384,7 +389,7 @@ function WidgetInner() {
                 value={orderNoInput}
                 onChange={(e) => setOrderNoInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), saveEmail())}
-                placeholder="Order number (optional)"
+                placeholder="Order number"
                 style={{ ...emailInputStyle, width: "100%", marginBottom: 6 }}
               />
               <div style={{ display: "flex", gap: 6 }}>
