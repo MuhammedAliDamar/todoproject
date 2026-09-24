@@ -58,6 +58,7 @@ interface Detail {
     timezone?: string | null;
     language?: string | null;
     note?: string | null;
+    orderNo?: string | null;
   };
   messages: Msg[];
 }
@@ -953,6 +954,7 @@ export default function ChatPage() {
               <NoteEditor key={detail.visitor.id + ":note"} note={detail.visitor.note ?? null} saving={savingNote} onSave={saveNote} />
 
               <dl className="space-y-3 text-sm mt-4">
+                <Info label="Order #" value={detail.visitor.orderNo || "—"} />
                 <Info label="Email" value={detail.visitor.email || "—"} />
                 <Info
                   label="Location (from timezone)"

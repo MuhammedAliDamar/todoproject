@@ -49,6 +49,7 @@ function WidgetInner() {
   // Ziyaretçi e-postası (yoksa sohbet üstünde toplama kartı gösterilir)
   const [email, setEmail] = useState<string | null>(null);
   const [emailInput, setEmailInput] = useState("");
+  const [orderNoInput, setOrderNoInput] = useState("");
   const [emailErr, setEmailErr] = useState<string | null>(null);
   const [savingEmail, setSavingEmail] = useState(false);
 
@@ -306,7 +307,12 @@ function WidgetInner() {
     }
     if (!key || !token) return;
     setSavingEmail(true);
-    const res = await post("/api/widget/identify", { publicKey: key, token, email: v });
+    const res = await post("/api/widget/identify", {
+      publicKey: key,
+      token,
+      email: v,
+      orderNo: orderNoInput.trim() || undefined,
+    });
     setSavingEmail(false);
     if (res.ok) {
       setEmail(v);
@@ -369,11 +375,18 @@ function WidgetInner() {
           {token && !email && (
             <div style={emailCard}>
               <div style={{ fontSize: 13, fontWeight: 600, color: "#1e1f21", marginBottom: 4 }}>
-                Get a reply by email
+                Share your order & email
               </div>
               <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8 }}>
-                Leave your email so we can reach you even if you leave this page.
+                Add your order number and email so we can help you faster.
               </div>
+              <input
+                value={orderNoInput}
+                onChange={(e) => setOrderNoInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), saveEmail())}
+                placeholder="Order number (optional)"
+                style={{ ...emailInputStyle, width: "100%", marginBottom: 6 }}
+              />
               <div style={{ display: "flex", gap: 6 }}>
                 <input
                   type="email"

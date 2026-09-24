@@ -10,8 +10,8 @@ export const dynamic = "force-dynamic";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
- * Ziyaretçi kimliği: e-posta (ve opsiyonel isim) toplar.
- * Body: { publicKey, token, email, name? }
+ * Ziyaretçi kimliği: e-posta (ve opsiyonel sipariş no / isim) toplar.
+ * Body: { publicKey, token, email, orderNo?, name? }
  */
 export async function POST(req: NextRequest) {
   try {
@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
 
     const email = cap(raw.email, 200);
     const name = cap(raw.name, 80);
+    const orderNo = cap(raw.orderNo, 100);
     if (typeof email !== "string" || !EMAIL_RE.test(email)) {
       return errorResponse("Invalid email", 400);
     }
@@ -41,19 +42,20 @@ export async function POST(req: NextRequest) {
     });
     if (!visitor) return errorResponse("Visitor not found", 404);
 
-    const data: { email: string; name?: string } = { email };
+    const data: { email: string; name?: string; orderNo?: string } = { email };
     // İsim yalnızca ziyaretçi kendisi verdiyse ve operatör önceden atamadıysa güncelle
     if (typeof name === "string" && name && !visitor.name) data.name = name;
+    if (typeof orderNo === "string" && orderNo) data.orderNo = orderNo;
 
     await prisma.visitor.update({ where: { id: visitor.id }, data });
 
     // Operatör paneline anlık bildir
     publish(websiteTopic(website.id), {
       type: "visitor",
-      visitor: { id: visitor.id, online: true, email, name: data.name ?? visitor.name },
+      visitor: { id: visitor.id, online: true, email, name: data.name ?? visitor.name, orderNo: data.orderNo },
     });
 
-    return jsonResponse({ ok: true, email });
+    return jsonResponse({ ok: true, email, orderNo: data.orderNo });
   } catch {
     return errorResponse("Server error", 500);
   }

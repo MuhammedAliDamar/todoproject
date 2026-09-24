@@ -49,6 +49,7 @@ export async function GET(req: NextRequest) {
             { name: { contains: q, mode: "insensitive" } },
             { email: { contains: q, mode: "insensitive" } },
             { note: { contains: q, mode: "insensitive" } },
+            { orderNo: { contains: q, mode: "insensitive" } },
           ],
         },
       },

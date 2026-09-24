@@ -244,6 +244,7 @@ model Visitor {
   name          String?
   note          String?  // operatörün ziyaretçi hakkında aldığı özel notlar
   email         String?
+  orderNo       String?  // ziyaretçinin bildirdiği sipariş numarası
   ip            String?
   userAgent     String?
   country       String?
