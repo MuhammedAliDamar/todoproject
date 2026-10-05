@@ -1,103 +1,126 @@
 #!/usr/bin/env bash
-# ============================================================================
-# marktasks TEK KURULUM — WordPress (marktasks.com) + Next panel (dashboard.marktasks.com)
-#   Panel : https://dashboard.marktasks.com  (Next, pm2, port 4444)
-#   Front : https://marktasks.com            (WordPress, PHP-FPM)
+# =====================================================================
+# marktasks — Tek Komut Sunucu Kurulumu
+#   Panel : https://marktasks.com  (Next.js 16, pm2, port 4444)
 #
-# DAYANIKLI: bir adım patlasa bile script DURMAZ; nginx + SSL mutlaka çalışır.
-# VERİ KAYBI YOK: DB'ler/secret'lar/WP içeriği korunur (hepsi "varsa dokunma").
+# Kullanım:
+#   sudo bash setup.sh
 #
-# Çalıştır (panel repo'sundan):
-#   cd /var/www/dashboard.marktasks.com && git pull && sudo bash setup.sh
-# Panel hâlâ /var/www/marktasks.com'daysa otomatik dashboard dizinine taşınır.
-# ============================================================================
-set -uo pipefail   # DİKKAT: -e YOK; script hatada durmaz, devam eder.
+# Opsiyonel bayraklar:
+#   SKIP_SSL=1        — Let's Encrypt atla (Cloudflare Full mod self-signed yeterli)
+#   IMPORT_OLD_DB=1   — Eski 72.61.182.238 sunucusundan DB'yi içeri aktar
+# =====================================================================
+set -uo pipefail
 
-# ===================== KONFIG =====================
+# ======================== KONFIG ========================
 APP_NAME="marktasks"
 APP_PORT=4444
-PANEL_DOMAIN="dashboard.marktasks.com"
-PANEL_DIR="/var/www/dashboard.marktasks.com"
-PG_DB="marktasks"; PG_USER="marktasks"
-
-WP_DOMAIN="marktasks.com"
-WP_DIR="/var/www/marktasks.com"
-WP_DB="marktasks_wp"; WP_DB_USER="marktasks_wp"
-
+APP_DOMAIN="marktasks.com"
+PG_DB="marktasks"
+PG_USER="marktasks"
 NODE_MAJOR="20"
 ADMIN_EMAIL="globayazilim@gmail.com"
 
-SLACK_CLIENT_ID="${SLACK_CLIENT_ID:-}"
-SLACK_CLIENT_SECRET="${SLACK_CLIENT_SECRET:-}"
-SLACK_SIGNING_SECRET="${SLACK_SIGNING_SECRET:-}"
-SMTP_HOST="${SMTP_HOST:-}"; SMTP_PORT="${SMTP_PORT:-}"
-SMTP_USER="${SMTP_USER:-}"; SMTP_PASS="${SMTP_PASS:-}"; SMTP_FROM="${SMTP_FROM:-}"
-# ==================================================
+# Eski production DB (import için)
+OLD_DB_URL="postgresql://marktasks:52db36b2ca3189dfaa78635bd40dc39d9f3179323441b52a@72.61.182.238:5432/marktasks"
+
+# .env değerleri
+SLACK_CLIENT_ID="9874048584085.10615149670229"
+SLACK_CLIENT_SECRET="a29a82832b436d7dc86ae5a5065f50ff"
+SLACK_SIGNING_SECRET="432d74f379f9595a43b6ce48ab5a37f7"
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT="587"
+SMTP_USER="commarktasks@gmail.com"
+SMTP_PASS="ittimnsquaxivzmf"
+SMTP_FROM="marktasks <commarktasks@gmail.com>"
+# ========================================================
 
 G="\033[32m"; Y="\033[33m"; R="\033[31m"; N="\033[0m"
 log()  { echo -e "${G}[+]${N} $*"; }
 warn() { echo -e "${Y}[!]${N} $*"; }
 err()  { echo -e "${R}[x]${N} $*" >&2; exit 1; }
 
-[[ $EUID -eq 0 ]] || err "Root: sudo bash setup.sh"
-SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-[[ -d "$SELF_DIR/.git" ]] || err "$SELF_DIR git repo değil. Paneli buraya clone'la."
+[[ $EUID -eq 0 ]] || err "Root gerekli: sudo bash setup.sh"
+APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+[[ -f "${APP_DIR}/package.json" ]] || err "package.json bulunamadı — repo kökünden çalıştır"
+cd "$APP_DIR"
+log "Uygulama dizini: ${APP_DIR}"
 
-gen_secret() { local f="$1"; if [[ -s "$f" ]]; then cat "$f"; else local s; s=$(openssl rand -hex "${2:-24}"); umask 077; printf '%s' "$s" >"$f"; chmod 600 "$f"; printf '%s' "$s"; fi; }
-env_val()    { [[ -f "${APP_DIR:-/nonexistent}/.env" ]] && grep -E "^$1=" "${APP_DIR}/.env" | head -1 | cut -d= -f2- | sed 's/^"//; s/"$//'; }
+# Tekrar çalıştırmalarda secret'ları yeniden üretmemek için dosyadan oku
+gen_secret() {
+  local f="$1" len="${2:-32}"
+  [[ -s "$f" ]] && { cat "$f"; return; }
+  local s; s=$(openssl rand -hex "$len")
+  umask 077; printf '%s' "$s" > "$f"; chmod 600 "$f"; printf '%s' "$s"
+}
 
-# ===================== 0) Panel'i doğru dizine yerleştir =====================
-if [[ "$SELF_DIR" == "$WP_DIR" ]]; then
-  [[ -e "$PANEL_DIR" && -n "$(ls -A "$PANEL_DIR" 2>/dev/null)" ]] && err "$PANEL_DIR dolu, çakışmayı elle çöz."
-  log "Panel $WP_DIR -> $PANEL_DIR taşınıyor (marktasks.com WordPress'e bırakılıyor)"
-  mkdir -p "$(dirname "$PANEL_DIR")"; mv "$WP_DIR" "$PANEL_DIR"; APP_DIR="$PANEL_DIR"
-elif [[ "$SELF_DIR" == "$PANEL_DIR" ]]; then APP_DIR="$PANEL_DIR"
-else APP_DIR="$SELF_DIR"; [[ "$APP_DIR" == "$WP_DIR" ]] && err "Panel WP_DIR ile çakışıyor."; fi
-cd "$APP_DIR"; log "Panel dizini: $APP_DIR"
-
-# ===================== 1) Sistem paketleri =====================
-log "Sistem paketleri"
+# ── 1) Sistem paketleri ─────────────────────────────────────────────
+log "1/6  Sistem paketleri"
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -y >/dev/null 2>&1 || warn "apt update sorunlu"
-if ! command -v node >/dev/null; then
-  curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash - && apt-get install -y nodejs
-fi
-command -v pm2     >/dev/null || npm install -g pm2 || warn "pm2 kurulamadı"
-command -v nginx   >/dev/null || apt-get install -y nginx
-command -v certbot >/dev/null || apt-get install -y certbot python3-certbot-nginx
-command -v psql    >/dev/null || apt-get install -y postgresql
-command -v unzip   >/dev/null || apt-get install -y unzip
-command -v mysql   >/dev/null || apt-get install -y mariadb-server
-ls /run/php/php*-fpm.sock >/dev/null 2>&1 || apt-get install -y php-fpm php-mysql php-curl php-gd php-mbstring php-xml php-zip php-imagick
-systemctl enable --now mariadb >/dev/null 2>&1 || true
-command -v wp >/dev/null || { curl -fsSL https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /usr/local/bin/wp && chmod +x /usr/local/bin/wp; }
-PHP_FPM_SOCK="$(ls /run/php/php*-fpm.sock 2>/dev/null | head -1)"
+apt-get update -y -q 2>/dev/null || warn "apt-get update sorunlu"
 
-# ===================== 2) Panel: Postgres =====================
-log "Postgres (panel)"
-PG_PASS="$(gen_secret "/root/.${APP_NAME}_db_pass" 24)"
-if [[ "$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='${PG_USER}'")" != "1" ]]; then
-  sudo -u postgres psql -c "CREATE ROLE ${PG_USER} LOGIN PASSWORD '${PG_PASS}';" >/dev/null
-else
-  sudo -u postgres psql -c "ALTER ROLE ${PG_USER} WITH PASSWORD '${PG_PASS}';" >/dev/null
+if ! command -v node >/dev/null 2>&1; then
+  log "     Node.js ${NODE_MAJOR} kuruluyor..."
+  curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash - >/dev/null 2>&1
+  apt-get install -y nodejs -q
 fi
-[[ "$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='${PG_DB}'")" == "1" ]] || \
+command -v pm2     >/dev/null 2>&1 || npm install -g pm2 --silent
+command -v nginx   >/dev/null 2>&1 || apt-get install -y nginx -q
+command -v certbot >/dev/null 2>&1 || apt-get install -y certbot python3-certbot-nginx -q
+if ! command -v psql >/dev/null 2>&1; then
+  apt-get install -y postgresql postgresql-contrib -q
+  systemctl enable postgresql >/dev/null 2>&1
+fi
+systemctl is-active --quiet postgresql || systemctl start postgresql
+
+node  --version && npm --version && pm2 --version | head -1 || true
+
+# ── 2) PostgreSQL: yeni kullanıcı + veritabanı ──────────────────────
+log "2/6  PostgreSQL"
+PG_PASS="$(gen_secret "/root/.${APP_NAME}_db_pass" 24)"
+
+if sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='${PG_USER}'" 2>/dev/null | grep -q 1; then
+  sudo -u postgres psql -c "ALTER ROLE ${PG_USER} WITH PASSWORD '${PG_PASS}';" >/dev/null
+else
+  sudo -u postgres psql -c "CREATE ROLE ${PG_USER} LOGIN PASSWORD '${PG_PASS}';" >/dev/null
+fi
+
+if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='${PG_DB}'" 2>/dev/null | grep -q 1; then
   sudo -u postgres psql -c "CREATE DATABASE ${PG_DB} OWNER ${PG_USER};" >/dev/null
+fi
+
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE ${PG_DB} TO ${PG_USER};" >/dev/null
 sudo -u postgres psql -d "${PG_DB}" -c "GRANT ALL ON SCHEMA public TO ${PG_USER};" >/dev/null
+log "     DB hazır: postgresql://localhost:5432/${PG_DB}"
 
-# ===================== 3) Panel: .env =====================
-log ".env (panel)"
+# ── 2b) Eski DB'yi içeri aktar (IMPORT_OLD_DB=1) ────────────────────
+if [[ "${IMPORT_OLD_DB:-0}" == "1" ]]; then
+  log "     Eski sunucudan DB dump alınıyor (72.61.182.238)..."
+  DUMP_FILE="/tmp/${APP_NAME}_import.dump"
+  pg_dump "${OLD_DB_URL}" -Fc -f "${DUMP_FILE}" \
+    && log "     Dump alındı: ${DUMP_FILE}" \
+    || warn "     pg_dump başarısız — eski sunucu erişilebilir mi?"
+
+  if [[ -f "${DUMP_FILE}" ]]; then
+    log "     Yeni DB'ye yükleniyor..."
+    pg_restore \
+      -d "postgresql://${PG_USER}:${PG_PASS}@localhost:5432/${PG_DB}" \
+      --no-owner --no-privileges --no-comments \
+      -Fc "${DUMP_FILE}" \
+      && log "     DB import başarılı" \
+      || warn "     pg_restore sorunlu (bazı hatalar normal olabilir — veriyi kontrol et)"
+    rm -f "${DUMP_FILE}"
+  fi
+fi
+
+# ── 3) .env ─────────────────────────────────────────────────────────
+log "3/6  .env yazılıyor"
 JWT_SECRET="$(gen_secret "/root/.${APP_NAME}_jwt" 48)"
-SLACK_CLIENT_ID="${SLACK_CLIENT_ID:-$(env_val SLACK_CLIENT_ID)}"
-SLACK_CLIENT_SECRET="${SLACK_CLIENT_SECRET:-$(env_val SLACK_CLIENT_SECRET)}"
-SLACK_SIGNING_SECRET="${SLACK_SIGNING_SECRET:-$(env_val SLACK_SIGNING_SECRET)}"
-SMTP_HOST="${SMTP_HOST:-$(env_val SMTP_HOST)}"; SMTP_PORT="${SMTP_PORT:-$(env_val SMTP_PORT)}"
-SMTP_USER="${SMTP_USER:-$(env_val SMTP_USER)}"; SMTP_PASS="${SMTP_PASS:-$(env_val SMTP_PASS)}"; SMTP_FROM="${SMTP_FROM:-$(env_val SMTP_FROM)}"
-cat > "${APP_DIR}/.env" <<EOF
+
+cat > "${APP_DIR}/.env" <<ENVEOF
 DATABASE_URL="postgresql://${PG_USER}:${PG_PASS}@localhost:5432/${PG_DB}"
 JWT_SECRET="${JWT_SECRET}"
-NEXT_PUBLIC_APP_URL="https://${PANEL_DOMAIN}"
+NEXT_PUBLIC_APP_URL="https://${APP_DOMAIN}"
 NODE_ENV="production"
 SLACK_CLIENT_ID="${SLACK_CLIENT_ID}"
 SLACK_CLIENT_SECRET="${SLACK_CLIENT_SECRET}"
@@ -107,145 +130,176 @@ SMTP_PORT="${SMTP_PORT}"
 SMTP_USER="${SMTP_USER}"
 SMTP_PASS="${SMTP_PASS}"
 SMTP_FROM="${SMTP_FROM}"
-EOF
+ENVEOF
 chmod 600 "${APP_DIR}/.env"
 
-# ===================== 4) Panel: build + pm2 =====================
-log "Panel build (npm ci + prisma + build)"
-( cd "$APP_DIR" && npm ci --no-audit --no-fund && npx prisma generate && npx prisma db push && npm run build ) \
-  || warn "Panel build sorunlu — eski build ile devam (logları kontrol et)"
+# ── 4) Build + PM2 ──────────────────────────────────────────────────
+log "4/6  npm ci + prisma + next build (birkaç dakika sürebilir)"
+
+mkdir -p "${APP_DIR}/public/uploads/chat"
+touch "${APP_DIR}/public/uploads/.gitkeep" "${APP_DIR}/public/uploads/chat/.gitkeep" 2>/dev/null || true
+
+BUILD_OK=0
+npm ci --no-audit --no-fund \
+  && npx prisma generate \
+  && npx prisma db push \
+  && npm run build \
+  && BUILD_OK=1 \
+  || warn "Build sorunlu — pm2 logs ${APP_NAME} --lines 50 ile kontrol et"
+
+# ecosystem.config.js içindeki cwd'yi bu dizine güncelle
 sed -i "s|cwd: \".*\"|cwd: \"${APP_DIR}\"|" "${APP_DIR}/ecosystem.config.js" 2>/dev/null || true
-# Taze başlat (eski/çökmüş process'i temizle)
+
 pm2 delete "${APP_NAME}" >/dev/null 2>&1 || true
-( cd "$APP_DIR" && pm2 start ecosystem.config.js )
-pm2 save >/dev/null 2>&1 || true
-pm2 startup systemd -u root --hp /root >/dev/null 2>&1 || true
-# 4444 cevap veriyor mu? (502 sebebi buradan anlaşılır)
-sleep 3
-if curl -sf -o /dev/null -w "%{http_code}" http://127.0.0.1:${APP_PORT} | grep -qE "200|307"; then
-  log "Panel 4444'te çalışıyor"
+pm2 start "${APP_DIR}/ecosystem.config.js"
+pm2 save >/dev/null
+
+# Sistem yeniden başlayınca otomatik çalış
+STARTUP_CMD="$(pm2 startup systemd -u root --hp /root 2>/dev/null | grep 'sudo env PATH' | head -1)"
+[[ -n "${STARTUP_CMD}" ]] && eval "${STARTUP_CMD}" >/dev/null 2>&1 || true
+
+log "     PM2 başlatıldı — bekleniyor (5 sn)..."
+sleep 5
+HTTP_CODE="$(curl -sf -o /dev/null -w "%{http_code}" "http://127.0.0.1:${APP_PORT}" 2>/dev/null || echo "000")"
+if echo "${HTTP_CODE}" | grep -qE "^(200|30[0-9])$"; then
+  log "     Panel port ${APP_PORT}'de çalışıyor (HTTP ${HTTP_CODE})"
 else
-  warn "Panel 4444'te cevap vermiyor — pm2 logs ${APP_NAME} ile bak (build hatası olabilir)"
-  pm2 logs "${APP_NAME}" --lines 15 --nostream 2>/dev/null || true
+  warn "     Panel port ${APP_PORT}'de cevap vermiyor (HTTP ${HTTP_CODE})"
+  [[ "${BUILD_OK}" -eq 0 ]] && pm2 logs "${APP_NAME}" --lines 30 --nostream 2>/dev/null || true
 fi
 
-# ===================== 5) WordPress (WP-CLI) =====================
-log "WordPress (MariaDB + WP-CLI)"
-WP_DB_PASS="$(gen_secret "/root/.${APP_NAME}_wpdb_pass" 24)"
-WP_ADMIN_PASS="$(gen_secret "/root/.${APP_NAME}_wp_admin" 12)"
-mysql <<SQL || warn "MariaDB komutları sorunlu"
-CREATE DATABASE IF NOT EXISTS \`${WP_DB}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER IF NOT EXISTS '${WP_DB_USER}'@'localhost' IDENTIFIED BY '${WP_DB_PASS}';
-ALTER USER '${WP_DB_USER}'@'localhost' IDENTIFIED BY '${WP_DB_PASS}';
-GRANT ALL PRIVILEGES ON \`${WP_DB}\`.* TO '${WP_DB_USER}'@'localhost';
-FLUSH PRIVILEGES;
-SQL
+# ── 5) Nginx ────────────────────────────────────────────────────────
+log "5/6  Nginx yapılandırması"
+SSL_DIR="/etc/nginx/ssl"; mkdir -p "${SSL_DIR}"
 
-mkdir -p "$WP_DIR"; chown -R www-data:www-data "$WP_DIR"
-WP="sudo -u www-data wp --path=${WP_DIR}"
-[[ -f "${WP_DIR}/wp-load.php" ]] || $WP core download || warn "WP core indirilemedi"
-if [[ -f "${WP_DIR}/wp-load.php" && ! -f "${WP_DIR}/wp-config.php" ]]; then
-  $WP config create --dbname="${WP_DB}" --dbuser="${WP_DB_USER}" --dbpass="${WP_DB_PASS}" --dbhost=localhost --force --extra-php <<'PHP'
-if ( isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https' ) { $_SERVER['HTTPS'] = 'on'; }
-PHP
-fi
-if [[ -f "${WP_DIR}/wp-config.php" ]] && ! $WP core is-installed >/dev/null 2>&1; then
-  $WP core install --url="https://${WP_DOMAIN}" --title="marktasks" --admin_user="admin" \
-    --admin_password="${WP_ADMIN_PASS}" --admin_email="${ADMIN_EMAIL}" --skip-email || warn "WP core install sorunlu"
-fi
-if [[ -f "${WP_DIR}/wp-config.php" ]]; then
-  $WP theme install hello-elementor --activate || warn "hello-elementor kurulamadı"
-  for s in elementor jeg-elementor-kit gum-elementor-addon metform header-footer-elementor elementskit-lite; do
-    $WP plugin install "$s" --activate || warn "plugin kurulamadı: $s"
-  done
-  KIT_SRC="${APP_DIR}/wordpress/saastify-kit.zip"
-  if [[ -f "$KIT_SRC" ]]; then
-    KIT_DST="${WP_DIR}/wp-content/uploads/saastify-kit.zip"
-    mkdir -p "${WP_DIR}/wp-content/uploads"; cp "$KIT_SRC" "$KIT_DST"; chown www-data:www-data "$KIT_DST"
-    $WP elementor kit import "$KIT_DST" >/dev/null 2>&1 && log "Kit import edildi" \
-      || warn "Kit'i Elementor > Tools > Import Kit'ten yükle: ${KIT_DST}"
-  fi
-  chown -R www-data:www-data "$WP_DIR"
+# Self-signed (Cloudflare Full modu için yeterli; Let's Encrypt sonradan üstüne yazar)
+if [[ ! -f "${SSL_DIR}/${APP_DOMAIN}.crt" ]]; then
+  openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+    -keyout "${SSL_DIR}/${APP_DOMAIN}.key" \
+    -out    "${SSL_DIR}/${APP_DOMAIN}.crt" \
+    -subj   "/CN=${APP_DOMAIN}" >/dev/null 2>&1
 fi
 
-# ===================== 6) NGINX + SSL (self-signed, Cloudflare 'Full' uyumlu) =====================
-log "nginx vhost'ları (80 + 443 self-signed)"
-# Origin için self-signed cert üret (Cloudflare edge zaten public TLS sağlar; CF->origin için bu yeter)
-SSL_DIR="/etc/nginx/ssl"; mkdir -p "$SSL_DIR"
-selfcert() { # $1=domain
-  [[ -f "${SSL_DIR}/$1.crt" ]] || openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
-    -keyout "${SSL_DIR}/$1.key" -out "${SSL_DIR}/$1.crt" -subj "/CN=$1" >/dev/null 2>&1
-}
-selfcert "${PANEL_DOMAIN}"
-selfcert "${WP_DOMAIN}"
+cat > "/etc/nginx/sites-available/${APP_DOMAIN}" <<NGINX
+# marktasks — https://${APP_DOMAIN}
+# Otomatik üretildi: $(date '+%Y-%m-%d %H:%M')
 
-# Panel vhost (80 + 443 -> Next)
-cat > "/etc/nginx/sites-available/${PANEL_DOMAIN}" <<EOF
 server {
-  listen 80;
-  listen 443 ssl;
-  server_name ${PANEL_DOMAIN};
-  ssl_certificate     ${SSL_DIR}/${PANEL_DOMAIN}.crt;
-  ssl_certificate_key ${SSL_DIR}/${PANEL_DOMAIN}.key;
-  client_max_body_size 25m;
-  location / {
-    proxy_pass http://127.0.0.1:${APP_PORT};
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade \$http_upgrade;
-    proxy_set_header Connection "upgrade";
-    proxy_set_header Host \$host;
-    proxy_set_header X-Real-IP \$remote_addr;
-    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto \$scheme;
-    proxy_cache_bypass \$http_upgrade;
-  }
-}
-EOF
-ln -sf "/etc/nginx/sites-available/${PANEL_DOMAIN}" "/etc/nginx/sites-enabled/${PANEL_DOMAIN}"
+    listen 80;
+    server_name ${APP_DOMAIN} www.${APP_DOMAIN};
 
-# WordPress vhost (80 + 443 -> php-fpm) — WP kuruluysa
-if [[ -n "$PHP_FPM_SOCK" && -f "${WP_DIR}/wp-load.php" ]]; then
-  cat > "/etc/nginx/sites-available/${WP_DOMAIN}" <<EOF
-server {
-  listen 80;
-  listen 443 ssl;
-  server_name ${WP_DOMAIN} www.${WP_DOMAIN};
-  ssl_certificate     ${SSL_DIR}/${WP_DOMAIN}.crt;
-  ssl_certificate_key ${SSL_DIR}/${WP_DOMAIN}.key;
-  root ${WP_DIR};
-  index index.php index.html;
-  client_max_body_size 64m;
-  location / { try_files \$uri \$uri/ /index.php?\$args; }
-  location ~ \.php\$ { include snippets/fastcgi-php.conf; fastcgi_pass unix:${PHP_FPM_SOCK}; }
-  location ~ /\.ht { deny all; }
+    # Let's Encrypt / ACME http-01 doğrulama
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
+    location / {
+        return 301 https://${APP_DOMAIN}\$request_uri;
+    }
 }
-EOF
-  ln -sf "/etc/nginx/sites-available/${WP_DOMAIN}" "/etc/nginx/sites-enabled/${WP_DOMAIN}"
-else
-  warn "WordPress hazır değil — ${WP_DOMAIN} vhost'u atlandı."
-fi
+
+# www → non-www yönlendirme
+server {
+    listen 443 ssl http2;
+    server_name www.${APP_DOMAIN};
+
+    ssl_certificate     ${SSL_DIR}/${APP_DOMAIN}.crt;
+    ssl_certificate_key ${SSL_DIR}/${APP_DOMAIN}.key;
+
+    return 301 https://${APP_DOMAIN}\$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name ${APP_DOMAIN};
+
+    ssl_certificate     ${SSL_DIR}/${APP_DOMAIN}.crt;
+    ssl_certificate_key ${SSL_DIR}/${APP_DOMAIN}.key;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+
+    client_max_body_size 25m;
+
+    # SSE endpoint'leri: /api/chat/stream  /api/widget/stream
+    # Buffering kapalı, çok uzun timeout (canlı chat bağlantısı)
+    location ~ ^/api/(chat|widget)/stream {
+        proxy_pass          http://127.0.0.1:${APP_PORT};
+        proxy_http_version  1.1;
+        proxy_set_header    Connection "";
+        proxy_set_header    Host               \$host;
+        proxy_set_header    X-Real-IP          \$remote_addr;
+        proxy_set_header    X-Forwarded-For    \$proxy_add_x_forwarded_for;
+        proxy_set_header    X-Forwarded-Proto  \$scheme;
+        proxy_buffering     off;
+        proxy_cache         off;
+        proxy_read_timeout  86400s;
+        proxy_send_timeout  86400s;
+        chunked_transfer_encoding on;
+    }
+
+    # Genel proxy
+    location / {
+        proxy_pass          http://127.0.0.1:${APP_PORT};
+        proxy_http_version  1.1;
+        proxy_set_header    Upgrade            \$http_upgrade;
+        proxy_set_header    Connection         "upgrade";
+        proxy_set_header    Host               \$host;
+        proxy_set_header    X-Real-IP          \$remote_addr;
+        proxy_set_header    X-Forwarded-For    \$proxy_add_x_forwarded_for;
+        proxy_set_header    X-Forwarded-Proto  \$scheme;
+        proxy_cache_bypass  \$http_upgrade;
+        proxy_read_timeout  300s;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout  300s;
+    }
+}
+NGINX
+
+ln -sf "/etc/nginx/sites-available/${APP_DOMAIN}" "/etc/nginx/sites-enabled/${APP_DOMAIN}"
 rm -f /etc/nginx/sites-enabled/default
-nginx -t && systemctl reload nginx && log "nginx reload OK" || warn "nginx -t HATALI — yukarıyı oku"
 
-# ===================== 7) Gerçek SSL (opsiyonel, Let's Encrypt) =====================
-# Self-signed taban zaten var. CERTBOT=1 ile çalıştırılırsa gerçek cert almayı dener.
-# DİKKAT: Domain Cloudflare proxy (turuncu bulut) arkasındaysa HTTP-01 BAŞARISIZ olur;
-# önce o kaydı geçici "DNS only" (gri bulut) yap, certbot'tan sonra tekrar proxy'e al.
-if [[ "${CERTBOT:-0}" == "1" ]]; then
-  log "Gerçek SSL deneniyor (certbot)"
-  certbot --nginx -d "${PANEL_DOMAIN}" --non-interactive --agree-tos -m "${ADMIN_EMAIL}" --redirect \
-    || warn "Certbot (panel) başarısız — Cloudflare kaydını DNS-only yapıp tekrar dene."
-  if [[ -f "${WP_DIR}/wp-load.php" ]]; then
-    certbot --nginx -d "${WP_DOMAIN}" -d "www.${WP_DOMAIN}" --non-interactive --agree-tos -m "${ADMIN_EMAIL}" --redirect \
-      || warn "Certbot (WordPress) başarısız — Cloudflare kaydını DNS-only yapıp tekrar dene."
-  fi
+nginx -t && systemctl reload nginx && log "     Nginx reload OK" \
+  || warn "     nginx -t HATALI — \`nginx -t\` çalıştırıp hatayı gör"
+
+# ── 6) SSL: Let's Encrypt ───────────────────────────────────────────
+if [[ "${SKIP_SSL:-0}" != "1" ]]; then
+  log "6/6  Let's Encrypt SSL alınıyor"
+  certbot --nginx \
+    -d "${APP_DOMAIN}" \
+    -d "www.${APP_DOMAIN}" \
+    --non-interactive \
+    --agree-tos \
+    -m "${ADMIN_EMAIL}" \
+    && log "     SSL sertifikası başarıyla alındı!" \
+    || warn "     Certbot başarısız. Olası sebepler:
+     1. Cloudflare 'turuncu bulut' (Proxied) açık — DNS-only yap, certbot sonrası tekrar aç.
+     2. Domain henüz bu sunucuya yönlendirilmemiş.
+     3. Port 80 dışarıya kapalı (ufw allow 80 && ufw allow 443).
+     Düzelince: sudo certbot --nginx -d ${APP_DOMAIN} -d www.${APP_DOMAIN} --agree-tos -m ${ADMIN_EMAIL}"
+else
+  log "6/6  SSL atlandı (SKIP_SSL=1)."
+  warn "     Cloudflare SSL/TLS modu 'Full' olmalı (Full Strict değil)."
 fi
 
-# ===================== ÖZET =====================
+# ── ÖZET ────────────────────────────────────────────────────────────
 echo
-log "BİTTİ"
-echo "  Panel:     https://${PANEL_DOMAIN}   (pm2: ${APP_NAME}:${APP_PORT})"
-echo "  WordPress: https://${WP_DOMAIN}      (admin: admin / $(cat /root/.${APP_NAME}_wp_admin 2>/dev/null))"
-echo "  WP $([[ -f ${WP_DIR}/wp-load.php ]] && echo 'KURULU' || echo 'KURULMADI — yukarıdaki [!] satırlarına bak')"
-warn "Origin self-signed cert kullanıyor. Cloudflare SSL/TLS modu 'Full' olmalı (Full STRICT değil)."
-warn "Tarayıcı 526 verirse: Cloudflare > SSL/TLS > Overview > 'Full' seç."
+echo -e "${G}╔══════════════════════════════════════════╗${N}"
+echo -e "${G}║         KURULUM TAMAMLANDI               ║${N}"
+echo -e "${G}╚══════════════════════════════════════════╝${N}"
+echo "  Panel URL  : https://${APP_DOMAIN}"
+echo "  Uygulama   : ${APP_DIR}"
+echo "  PM2        : pm2 status | pm2 logs ${APP_NAME}"
+echo "  DB         : postgresql://localhost:5432/${PG_DB}"
+echo "  .env       : ${APP_DIR}/.env  (izinler: 600)"
+echo
+echo -e "${Y}  Eski DB'yi içeri almak için:${N}"
+echo "    IMPORT_OLD_DB=1 sudo bash setup.sh"
+echo
+echo -e "${Y}  Slack slash-command Request URL'leri:${N}"
+echo "    /task command : https://${APP_DOMAIN}/api/slack/command"
+echo "    Interactivity : https://${APP_DOMAIN}/api/slack/interactions"
+echo
